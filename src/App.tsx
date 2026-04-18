@@ -2,56 +2,45 @@ import { useEffect, useRef } from 'react';
 
 // ─── STARDEW VALLEY COLOR PALETTE ────────────────────────────────────────────
 const SDV = {
-  // Dark oak / wood tones
   oakDark:    '#2C1A0E',
   oakMid:     '#3D2410',
   oakLight:   '#5C3618',
   oakPlank:   '#6B4020',
   oakHighlight:'#8B5A2B',
   oakBezel:   '#A0722A',
-  // Warm parchment / text
   parchment:  '#F5E6C8',
   parchDark:  '#D4B896',
   parchFaded: '#A08060',
-  // UI accent greens (SDV style)
   uiGreen:    '#5CA020',
   uiGreenLt:  '#80D030',
   uiGreenDk:  '#3A6810',
-  // UI highlight blues (SDV water)
   waterSurf:  '#3878B0',
   waterMid:   '#1A4878',
   waterDeep:  '#0A1E3C',
   waterFoam:  '#A8D8F8',
-  // Item rarities (SDV-ish)
   common:     '#C8C8C8',
   uncommon:   '#5CB85C',
   rare:       '#4898F8',
   epic:       '#C868E8',
   legendary:  '#F8C820',
-  // Danger
   danger:     '#E03020',
   dangerGlow: '#FF6040',
-  // Coin
   coin:       '#F8C820',
-  // Weather
   calm:       '#87CEEB',
   stormy:     '#445566',
   foggy:      '#8899AA',
   rainy:      '#334455',
-  // Score/UI
   score:      '#F8C820',
   dmg:        '#E04020',
   miss:       '#CC4444',
 };
 
-// ─── GAME STATES ─────────────────────────────────────────────────────────────
 const S = {
   TITLE: 0, DEPTH: 1, CAST_CHARGE: 2, CASTING: 3, WAITING: 4,
   BITE: 5, REEL: 6, CAUGHT: 7, MISS: 8, ZONE_CLEAR: 9,
   SHOP: 10, GAME_OVER: 11, WIN: 12, TROPHY: 13,
 };
 
-// ─── WEATHER SYSTEM ───────────────────────────────────────────────────────────
 const WEATHER_TYPES = [
   { id: 'calm',   label: 'CALM',   icon: '☀',  biteBonus: 1.0,  speedMult: 1.0,  tensionMult: 1.0,  color: SDV.calm },
   { id: 'rainy',  label: 'RAINY',  icon: '🌧', biteBonus: 1.3,  speedMult: 1.1,  tensionMult: 1.1,  color: SDV.rainy },
@@ -59,7 +48,6 @@ const WEATHER_TYPES = [
   { id: 'foggy',  label: 'FOGGY',  icon: '🌫', biteBonus: 1.15, speedMult: 0.85, tensionMult: 0.85, color: SDV.foggy },
 ];
 
-// ─── ZONES ────────────────────────────────────────────────────────────────────
 const ZONES = [
   { name: 'SUNNYSIDE POND',   pool: 's', casts: 8,  quota: 400,  bgSky: ['#6AB0E8','#4888C8','#3060A8'], bgWater: ['#2A7AC8','#1850A0','#0A2860'], stars: 0,  cloudCount: 4 },
   { name: 'PELICAN COVE',     pool: 'm', casts: 9,  quota: 800,  bgSky: ['#E8A060','#C07840','#8A3020'], bgWater: ['#1A6090','#0E3870','#061850'], stars: 10, cloudCount: 3 },
@@ -68,48 +56,45 @@ const ZONES = [
   { name: 'THE ABYSS',        pool: 'd', casts: 11, quota: 3500, bgSky: ['#060308','#030204','#010102'], bgWater: ['#030208','#010104','#000102'], stars: 80, cloudCount: 0 },
 ];
 
-// ─── FISH DATABASE ────────────────────────────────────────────────────────────
 const FISH: Record<string, any> = {
-  minnow:    { name:'MINNOW',      tier:1, pts:40,   coins:2,  fight:'drift',   w:18, h:8,  col:'#90C880', prob:{s:60,m:20,d:0},  danger:false, trophyColor:'#90C880', desc:'A tiny, harmless fish.' },
-  perch:     { name:'PERCH',       tier:1, pts:60,   coins:3,  fight:'drift',   w:22, h:10, col:'#D4A840', prob:{s:40,m:25,d:0},  danger:false, trophyColor:'#D4A840', desc:'Common but tasty.' },
-  carp:      { name:'CARP',        tier:1, pts:80,   coins:4,  fight:'shake',   w:26, h:12, col:'#C88020', prob:{s:25,m:35,d:5},  danger:false, trophyColor:'#C88020', desc:'A sturdy fighter.' },
+  minnow:    { name:'MINNOW',          tier:1, pts:40,  coins:2,  fight:'drift',   w:18, h:8,  col:'#90C880', prob:{s:60,m:20,d:0},  danger:false, trophyColor:'#90C880', desc:'A tiny, harmless fish.' },
+  perch:     { name:'PERCH',           tier:1, pts:60,  coins:3,  fight:'drift',   w:22, h:10, col:'#D4A840', prob:{s:40,m:25,d:0},  danger:false, trophyColor:'#D4A840', desc:'Common but tasty.' },
+  carp:      { name:'CARP',            tier:1, pts:80,  coins:4,  fight:'shake',   w:26, h:12, col:'#C88020', prob:{s:25,m:35,d:5},  danger:false, trophyColor:'#C88020', desc:'A sturdy fighter.' },
   bass:      { name:'LARGEMOUTH BASS', tier:2, pts:140, coins:6,  fight:'shake',   w:30, h:13, col:'#607840', prob:{s:8, m:30,d:10}, danger:false, trophyColor:'#607840', desc:'Famous sport fish.' },
-  catfish:   { name:'CATFISH',     tier:2, pts:180,  coins:8,  fight:'surge',   w:34, h:14, col:'#706050', prob:{s:3, m:20,d:20}, danger:false, trophyColor:'#706050', desc:'Bottom dweller.' },
-  pike:      { name:'PIKE',        tier:2, pts:220,  coins:10, fight:'surge',   w:36, h:12, col:'#708850', prob:{s:2, m:15,d:15}, danger:false, trophyColor:'#708850', desc:'Aggressive predator.' },
-  swordfish: { name:'SWORDFISH',   tier:3, pts:360,  coins:18, fight:'erratic', w:42, h:14, col:'#6898C8', prob:{s:0, m:5, d:18}, danger:false, trophyColor:'#6898C8', desc:'The ocean champion.' },
-  oarfish:   { name:'OARFISH',     tier:3, pts:500,  coins:25, fight:'boss',    w:50, h:10, col:'#A878C0', prob:{s:0, m:2, d:12}, danger:false, trophyColor:'#A878C0', desc:'Sea serpent of legend.' },
-  kraken:    { name:'KRAKEN',      tier:4, pts:900,  coins:50, fight:'boss',    w:56, h:22, col:'#4830A0', prob:{s:0, m:0, d:4},  danger:false, trophyColor:'#4830A0', desc:'The end boss.' },
-  // DANGER FISH
-  moray:     { name:'MORAY EEL',   tier:3, pts:480,  coins:22, fight:'erratic', w:44, h:9,  col:'#B84020', prob:{s:0, m:4, d:10}, danger:true,  trophyColor:'#B84020', desc:'DANGER: Snaps your line!', snapRate:0.018 },
-  barracuda: { name:'BARRACUDA',   tier:3, pts:520,  coins:24, fight:'surge',   w:40, h:11, col:'#C06828', prob:{s:0, m:3, d:12}, danger:true,  trophyColor:'#C06828', desc:'DANGER: Blazing fast!',  snapRate:0.014 },
-  piranha:   { name:'PIRANHA',     tier:2, pts:280,  coins:14, fight:'erratic', w:26, h:12, col:'#D03A1A', prob:{s:1, m:6, d:6},  danger:true,  trophyColor:'#D03A1A', desc:'DANGER: Pack hunter!',  snapRate:0.012 },
+  catfish:   { name:'CATFISH',         tier:2, pts:180, coins:8,  fight:'surge',   w:34, h:14, col:'#706050', prob:{s:3, m:20,d:20}, danger:false, trophyColor:'#706050', desc:'Bottom dweller.' },
+  pike:      { name:'PIKE',            tier:2, pts:220, coins:10, fight:'surge',   w:36, h:12, col:'#708850', prob:{s:2, m:15,d:15}, danger:false, trophyColor:'#708850', desc:'Aggressive predator.' },
+  swordfish: { name:'SWORDFISH',       tier:3, pts:360, coins:18, fight:'erratic', w:42, h:14, col:'#6898C8', prob:{s:0, m:5, d:18}, danger:false, trophyColor:'#6898C8', desc:'The ocean champion.' },
+  oarfish:   { name:'OARFISH',         tier:3, pts:500, coins:25, fight:'boss',    w:50, h:10, col:'#A878C0', prob:{s:0, m:2, d:12}, danger:false, trophyColor:'#A878C0', desc:'Sea serpent of legend.' },
+  kraken:    { name:'KRAKEN',          tier:4, pts:900, coins:50, fight:'boss',    w:56, h:22, col:'#4830A0', prob:{s:0, m:0, d:4},  danger:false, trophyColor:'#4830A0', desc:'The end boss.' },
+  moray:     { name:'MORAY EEL',       tier:3, pts:480, coins:22, fight:'erratic', w:44, h:9,  col:'#B84020', prob:{s:0, m:4, d:10}, danger:true,  trophyColor:'#B84020', desc:'DANGER: Snaps your line!', snapRate:0.018 },
+  barracuda: { name:'BARRACUDA',       tier:3, pts:520, coins:24, fight:'surge',   w:40, h:11, col:'#C06828', prob:{s:0, m:3, d:12}, danger:true,  trophyColor:'#C06828', desc:'DANGER: Blazing fast!',  snapRate:0.014 },
+  piranha:   { name:'PIRANHA',         tier:2, pts:280, coins:14, fight:'erratic', w:26, h:12, col:'#D03A1A', prob:{s:1, m:6, d:6},  danger:true,  trophyColor:'#D03A1A', desc:'DANGER: Pack hunter!',  snapRate:0.012 },
 };
 const FISH_LIST = Object.keys(FISH);
 
-// ─── SHOP CATALOG ─────────────────────────────────────────────────────────────
 const BAIT_CATALOG = [
-  { id:'worm',      name:'EARTHWORM',     cost:8,  uses:4, bonusTier:0, attract:1,   luckyBonus:false, col:'#C87840', desc:'Basic bait. Works on all fish.' },
-  { id:'cricket',   name:'CRICKET',       cost:12, uses:3, bonusTier:1, attract:1.5, luckyBonus:false, col:'#909030', desc:'+50% chance for uncommon fish.' },
-  { id:'squid',     name:'SQUID',         cost:18, uses:3, bonusTier:2, attract:1.8, luckyBonus:false, col:'#8090C8', desc:'Attracts rare sea fish.' },
-  { id:'glowbug',   name:'GLOWBUG',       cost:22, uses:2, bonusTier:2, attract:2.0, luckyBonus:true,  col:'#70E090', desc:'Lucky! +30 base pts.' },
-  { id:'bread',     name:'BREAD CRUST',   cost:6,  uses:5, bonusTier:0, attract:1,   luckyBonus:false, col:'#C8A040', desc:'Cheap and plentiful.' },
-  { id:'explosive', name:'DEPTH CHARGE',  cost:30, uses:1, bonusTier:3, attract:3.0, luckyBonus:false, col:'#E03020', desc:'GUARANTEED epic+ fish!' },
+  { id:'worm',      name:'EARTHWORM',    cost:8,  uses:4, bonusTier:0, attract:1,   luckyBonus:false, col:'#C87840', desc:'Basic bait. Works on all fish.' },
+  { id:'cricket',   name:'CRICKET',      cost:12, uses:3, bonusTier:1, attract:1.5, luckyBonus:false, col:'#909030', desc:'+50% chance for uncommon fish.' },
+  { id:'squid',     name:'SQUID',        cost:18, uses:3, bonusTier:2, attract:1.8, luckyBonus:false, col:'#8090C8', desc:'Attracts rare sea fish.' },
+  { id:'glowbug',   name:'GLOWBUG',      cost:22, uses:2, bonusTier:2, attract:2.0, luckyBonus:true,  col:'#70E090', desc:'Lucky! +30 base pts.' },
+  { id:'bread',     name:'BREAD CRUST',  cost:6,  uses:5, bonusTier:0, attract:1,   luckyBonus:false, col:'#C8A040', desc:'Cheap and plentiful.' },
+  { id:'explosive', name:'DEPTH CHARGE', cost:30, uses:1, bonusTier:3, attract:3.0, luckyBonus:false, col:'#E03020', desc:'GUARANTEED epic+ fish!' },
 ];
 const ROD_UPGRADES = [
-  { id:'reel1',     name:'SMOOTH REEL',   cost:20, type:'reel',     col:'#4080C8', desc:'Reel 25% faster.' },
-  { id:'reel2',     name:'TURBO REEL',    cost:35, type:'reel',     col:'#2060A8', desc:'Reel 50% faster.' },
-  { id:'turbo',     name:'OVERDRIVE',     cost:55, type:'reel',     col:'#1848A0', desc:'Reel 100% faster!' },
-  { id:'ironline',  name:'IRON LINE',     cost:25, type:'tension',  col:'#A0A0C0', desc:'40% less tension.' },
-  { id:'kevlar',    name:'KEVLAR LINE',   cost:45, type:'tension',  col:'#80C0F8', desc:'70% less tension!' },
-  { id:'magnet',    name:'FISH MAGNET',   cost:30, type:'magnet',   col:'#C04040', desc:'Pulls zone toward cursor.' },
-  { id:'deepmagnet',name:'DEEP MAGNET',   cost:50, type:'deepmagnet',col:'#A02020',desc:'Strong pull + anchor.' },
-  { id:'anchor',    name:'ANCHOR PULSE',  cost:30, type:'anchor',   col:'#30D890', desc:'Brief auto-catch assist.' },
-  { id:'calm',      name:'CALM WATERS',   cost:22, type:'calm',     col:'#60C8A0', desc:'Tension drains 2x.' },
-  { id:'zen',       name:'ZEN MASTER',    cost:40, type:'zen',      col:'#A0E080', desc:'Tension drains 3x + auto.' },
-  { id:'luckrod',   name:'LUCKY ROD',     cost:28, type:'accuracy', col:'#F8C820', desc:'Score scales with accuracy.' },
-  { id:'doubler',   name:'SCORE DOUBLER', cost:50, type:'doubler',  col:'#E868E8', desc:'All scores x1.5.' },
-  { id:'castmaster',name:'CAST MASTER',   cost:35, type:'cast',     col:'#F8A040', desc:'Power cast bonus +20%.' },
-  { id:'dangerrod', name:'DANGER ROD',    cost:40, type:'danger',   col:'#E03020', desc:'Danger fish snap 40% slower.' },
+  { id:'reel1',     name:'SMOOTH REEL',   cost:20, type:'reel',      col:'#4080C8', desc:'Reel 25% faster.' },
+  { id:'reel2',     name:'TURBO REEL',    cost:35, type:'reel',      col:'#2060A8', desc:'Reel 50% faster.' },
+  { id:'turbo',     name:'OVERDRIVE',     cost:55, type:'reel',      col:'#1848A0', desc:'Reel 100% faster!' },
+  { id:'ironline',  name:'IRON LINE',     cost:25, type:'tension',   col:'#A0A0C0', desc:'40% less tension.' },
+  { id:'kevlar',    name:'KEVLAR LINE',   cost:45, type:'tension',   col:'#80C0F8', desc:'70% less tension!' },
+  { id:'magnet',    name:'FISH MAGNET',   cost:30, type:'magnet',    col:'#C04040', desc:'Pulls zone toward cursor.' },
+  { id:'deepmagnet',name:'DEEP MAGNET',   cost:50, type:'deepmagnet',col:'#A02020', desc:'Strong pull + anchor.' },
+  { id:'anchor',    name:'ANCHOR PULSE',  cost:30, type:'anchor',    col:'#30D890', desc:'Brief auto-catch assist.' },
+  { id:'calm',      name:'CALM WATERS',   cost:22, type:'calm',      col:'#60C8A0', desc:'Tension drains 2x.' },
+  { id:'zen',       name:'ZEN MASTER',    cost:40, type:'zen',       col:'#A0E080', desc:'Tension drains 3x + auto.' },
+  { id:'luckrod',   name:'LUCKY ROD',     cost:28, type:'accuracy',  col:'#F8C820', desc:'Score scales with accuracy.' },
+  { id:'doubler',   name:'SCORE DOUBLER', cost:50, type:'doubler',   col:'#E868E8', desc:'All scores x1.5.' },
+  { id:'castmaster',name:'CAST MASTER',   cost:35, type:'cast',      col:'#F8A040', desc:'Power cast bonus +20%.' },
+  { id:'dangerrod', name:'DANGER ROD',    cost:40, type:'danger',    col:'#E03020', desc:'Danger fish snap 40% slower.' },
 ];
 const LURES = [
   { id:'lucky',  name:'LUCKY CHARM',  cost:25, col:'#F8C820', desc:'First catch per zone: 2x score.' },
@@ -131,21 +116,28 @@ export default function App() {
     cx.imageSmoothingEnabled = false;
 
     // ── CANVAS SIZING ──────────────────────────────────────────────────────────
+    // FIX: Increased max SCALE from 3.5 to fill the screen, ensuring crisp pixels
     let W = 320, H = 240, SCALE = 1;
     const IS_MOBILE = window.innerWidth < 600;
 
     function resizeCanvas() {
       const vw = window.innerWidth, vh = window.innerHeight;
       if (IS_MOBILE) {
-        SCALE = Math.min(vw / 320, vh / 480);
+        // FIX: Use floor to avoid sub-pixel scaling that causes blur
+        SCALE = Math.floor(Math.min(vw / 320, vh / 480));
+        if (SCALE < 1) SCALE = 1;
         W = 320; H = 480;
       } else {
-        SCALE = Math.min(vw / 320, vh / 240, 3.5);
+        // FIX: Allow scale up to fill screen (no arbitrary cap at 3.5)
+        SCALE = Math.floor(Math.min(vw / 320, vh / 240));
+        if (SCALE < 1) SCALE = 1;
         W = 320; H = 240;
       }
-      canvas.width = W; canvas.height = H;
-      canvas.style.width = `${W * SCALE}px`;
+      canvas.width = W;
+      canvas.height = H;
+      canvas.style.width  = `${W * SCALE}px`;
       canvas.style.height = `${H * SCALE}px`;
+      // FIX: Re-apply after resize as it resets
       cx.imageSmoothingEnabled = false;
     }
     resizeCanvas();
@@ -192,6 +184,7 @@ export default function App() {
     let clouds: any[] = [];
     let underwaterFish: any[] = [];
     let rainDrops: any[] = [];
+    let animId = 0;
 
     function genStars(count: number) {
       stars = Array.from({length: count}, () => ({
@@ -230,10 +223,10 @@ export default function App() {
 
     function pickWeather() {
       const roll = Math.random();
-      if (roll < 0.40) return WEATHER_TYPES[0]; // calm
-      if (roll < 0.65) return WEATHER_TYPES[1]; // rainy
-      if (roll < 0.80) return WEATHER_TYPES[2]; // stormy
-      return WEATHER_TYPES[3]; // foggy
+      if (roll < 0.40) return WEATHER_TYPES[0];
+      if (roll < 0.65) return WEATHER_TYPES[1];
+      if (roll < 0.80) return WEATHER_TYPES[2];
+      return WEATHER_TYPES[3];
     }
 
     function newGame() {
@@ -263,15 +256,11 @@ export default function App() {
         catchCardAnim: 0,
         consecutiveMisses: 0,
         newTrophyFish: null,
-        // WEATHER
         weather,
-        // POWER CAST
         castChargeT: 0,
         castPower: 0,
-        // CURRENT SYSTEM
         currentDir: Math.random() < 0.5 ? 1 : -1,
         currentStrength: 0,
-        // ZONE CLEAR
         zoneClearNewTrophy: null,
       };
       if (weather.id === 'rainy' || weather.id === 'stormy') genRain();
@@ -285,7 +274,6 @@ export default function App() {
     function getWaterY(x = W / 2, t = g?.waterT || 0) {
       const base = IS_MOBILE ? H * 0.38 : 115;
       const wave = Math.sin((x / 40 + t) * 1.2) * 3 + Math.sin((x / 20 + t * 1.7) * 0.8) * 1.5;
-      // stormy adds choppiness
       const stormExtra = g?.weather?.id === 'stormy' ? Math.sin((x / 15 + t * 2.5) * 2) * 4 : 0;
       return base + wave + stormExtra;
     }
@@ -306,25 +294,24 @@ export default function App() {
     function tensionBuildMult() {
       let m = 1;
       if (hasUpgrade('ironline')) m -= 0.40;
-      if (hasUpgrade('kevlar')) m -= 0.70;
-      // weather affects tension
+      if (hasUpgrade('kevlar'))   m -= 0.70;
       m *= g.weather.tensionMult;
       return Math.max(0.08, m);
     }
     function tensionDrainMult() {
       let m = 1;
       if (hasUpgrade('calm')) m += 1.0;
-      if (hasUpgrade('zen')) m += 2.0;
+      if (hasUpgrade('zen'))  m += 2.0;
       return m;
     }
     function magnetStrength() {
       if (hasUpgrade('deepmagnet')) return 0.32;
-      if (hasUpgrade('magnet')) return 0.16;
+      if (hasUpgrade('magnet'))     return 0.16;
       return 0;
     }
     function anchorStrength() {
       if (hasUpgrade('deepmagnet')) return 0.45;
-      if (hasUpgrade('anchor')) return 0.45;
+      if (hasUpgrade('anchor'))     return 0.45;
       return 0;
     }
     function zenAutoRecover() { return hasUpgrade('zen') ? 0.80 : 0; }
@@ -365,7 +352,7 @@ export default function App() {
       return FISH[list[0]];
     }
 
-    // ─── POWER CAST ──────────────────────────────────────────────────────────
+    // ── POWER CAST ────────────────────────────────────────────────────────────
     function startCastCharge() {
       if (g.castsLeft <= 0) return;
       g.castChargeT = 0;
@@ -375,22 +362,24 @@ export default function App() {
     function releasePowerCast() {
       if (state !== S.CAST_CHARGE) return;
       const power = g.castPower;
-      g.castBonus = power; // 0..1 bonus from power
-      if (power > 0.7) { SFX.powercast(); addPopup('POWER CAST!', SDV.legendary, W / 2, 80); }
+      if (power > 0.7) {
+        SFX.powercast();
+        addPopup('POWER CAST!', SDV.legendary, W / 2, 80);
+      }
       startCast(g.castAimX, g.castAimY, true, power);
     }
-
     function startCast(aimX: number, aimY: number, keyboard = false, power = 0) {
       if (g.castsLeft <= 0) return;
       g.castsLeft--;
       g.totalCasts++;
-      const depthBonus = power > 0.5 ? 1 + (power - 0.5) * 0.6 : 1; // deeper cast with power
+      SFX.cast();
+      const depthBonus = power > 0.5 ? 1 + (power - 0.5) * 0.6 : 1;
       g.castAimX = keyboard ? (140 + g.depthSel * 40) : (aimX || 180);
       g.castAimY = keyboard ? getWaterY() - 5 : (aimY || getWaterY() - 5);
       const idealX = 160 + g.depthSel * 30;
       const dist = Math.abs(g.castAimX - idealX);
       const accuracyBonus = Math.max(0, 1 - dist / 150);
-      g.castBonus = accuracyBonus + power * 0.3; // power adds accuracy bonus
+      g.castBonus = accuracyBonus + power * 0.3;
       if (hasUpgrade('castmaster')) g.castBonus = Math.min(1, g.castBonus * 1.2);
       if (g.activeBait !== null && g.baits[g.activeBait]) {
         g.baits[g.activeBait].usesLeft--;
@@ -404,147 +393,280 @@ export default function App() {
       const weatherBiteBonus = g.weather.biteBonus;
       g.biteDelay = Math.max(30, (70 + Math.random() * 100 + g.depthSel * 35) / weatherBiteBonus / depthBonus);
       g.castT = 0;
-      // Random zone current each cast
       g.currentDir = Math.random() < 0.5 ? 1 : -1;
-      g.currentStrength = 0.3 + Math.random() * (0.5 * (g.zone / 4 + 0.5));
+      g.currentStrength = Math.random() * 0.4;
+      g.bobberX = g.castAimX;
+      g.bobberY = g.castAimY;
+      addParticle({ type: 'ripple', x: g.bobberX, y: getWaterY(g.bobberX), r: 2, life: 40, maxLife: 40 });
       state = S.CASTING;
-      SFX.cast();
-      spawnSplash(g.castAimX, g.castAimY + 5, 8, SDV.waterFoam);
-      spawnRipple(g.castAimX, g.castAimY);
     }
 
     function earlyReel() {
       if (state !== S.WAITING) return;
-      g.consecutiveMisses++;
-      if (hasLure('rusty')) { g.zScore += 120; g.score += 120; addPopup('+120', SDV.score, W / 2, 90); }
-      addPopup('TOO EARLY!', SDV.dmg, W / 2, 100);
-      SFX.miss();
-      g.combo = 0;
-      state = S.MISS; g.timer = 0;
+      if (hasLure('rusty')) {
+        g.score += 120; g.zScore += 120;
+        addPopup('RUSTY HOOK! +120', SDV.uncommon, W / 2, 90);
+      }
+      addPopup('EARLY REEL', SDV.parchFaded, W / 2, 90);
+      state = S.MISS; g.timer = 0; g.combo = 0;
     }
 
+    // ── REEL MINI-GAME INIT ────────────────────────────────────────────────────
     function startReel() {
       const fish = g.fish;
-      const zoneW = IS_MOBILE ? 260 : 220;
-      let sw: number, sp: number;
-      switch (fish.fight) {
-        case 'drift':   sw = 58; sp = 1.0; break;
-        case 'shake':   sw = 48; sp = 1.4; break;
-        case 'surge':   sw = 40; sp = 1.6; break;
-        case 'erratic': sw = 36; sp = 1.55; break;
-        case 'boss':    sw = 30; sp = 1.85; break;
-        default:        sw = 50; sp = 1.0;
-      }
-      // Weather affects fish speed
-      sp *= g.weather.speedMult;
-      // Danger fish are faster
-      if (fish.danger) { sp *= 1.25; sw = Math.max(22, sw - 8); }
-      const by = IS_MOBILE ? H - 130 : 183;
+      SFX.bite();
+      if (fish.danger) SFX.danger();
+
+      const barW = IS_MOBILE ? 200 : 220;
+      const barH = IS_MOBILE ? 24 : 20;
+      const barX = W / 2 - barW / 2;
+      const barY = IS_MOBILE ? H - 170 : 195;
+
+      const zoneW = Math.max(20, Math.round(barW * (0.22 - fish.tier * 0.02)));
+      const zoneX = Math.floor(Math.random() * (barW - zoneW));
+      const startPos = Math.floor(Math.random() * barW);
+
+      // FIX: 'duration' controls how long you need to be in zone. Fish fight type
+      // determines base speed. These were tuned to be very playable.
+      const fightSpeeds: Record<string, number> = {
+        drift: 0.6, shake: 0.9, surge: 1.2, erratic: 1.4, boss: 1.6,
+      };
+      const baseSpeed = (fightSpeeds[fish.fight] || 1.0) * g.weather.speedMult;
+
       g.reel = {
-        barX: IS_MOBILE ? 30 : 50, barY: by, barW: zoneW, barH: 20,
-        cur: zoneW / 2, vel: 0,
-        zoneX: zoneW / 2 - sw / 2, zoneW: sw,
-        tension: 0, t: 0, speed: sp,
-        success: 0, duration: fish.tier * 28 + 55,
-        fishFightT: 0, done: false,
-        _wasInZone: false, _anchorPulse: 0,
-        // Current offset applied to zone movement
+        barX, barY, barW, barH,
+        zoneX, zoneW,
+        cur: startPos,
+        vel: (Math.random() < 0.5 ? 1 : -1) * baseSpeed,
+        baseSpeed,
+        tension: 0,
+        success: 0,
+        duration: 90,
         currentOffset: 0,
+        _anchorPulse: 0,
       };
       state = S.REEL;
+    }
+
+    // ── PARTICLES ─────────────────────────────────────────────────────────────
+    function addParticle(p: any) { particles.push(p); }
+    function addPopup(text: string, col: string, x: number, y: number) {
+      particles.push({ type: 'popup', text, col, x, y, life: 80, maxLife: 80 });
+    }
+    function spawnSplash(x: number, y: number, col = '#A8D8F8') {
+      for (let i = 0; i < 6; i++) {
+        particles.push({
+          type: 'spark', x, y, col,
+          vx: (Math.random() - 0.5) * 3,
+          vy: -Math.random() * 2 - 1,
+          life: 20 + Math.random() * 15,
+          maxLife: 35,
+          size: 1 + Math.random() * 2,
+        });
+      }
+    }
+
+    // ── DRAWING HELPERS ───────────────────────────────────────────────────────
+    function drawWoodBg(x: number, y: number, w: number, h: number) {
+      cx.fillStyle = SDV.oakMid;
+      cx.fillRect(x, y, w, h);
+      cx.fillStyle = SDV.oakDark;
+      for (let ly = y; ly < y + h; ly += 6) cx.fillRect(x, ly, w, 1);
+      cx.fillStyle = 'rgba(255,200,100,0.04)';
+      for (let lx = x; lx < x + w; lx += 18) cx.fillRect(lx, y, 2, h);
+    }
+    function drawWoodBorder(x: number, y: number, w: number, h: number, highlight = false, gold = false) {
+      drawWoodBg(x, y, w, h);
+      cx.strokeStyle = gold ? SDV.legendary : highlight ? SDV.oakHighlight : SDV.oakBezel;
+      cx.lineWidth = 2;
+      cx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+      cx.fillStyle = 'rgba(255,255,255,0.08)';
+      cx.fillRect(x + 2, y + 2, w - 4, 2);
+      cx.fillStyle = 'rgba(0,0,0,0.18)';
+      cx.fillRect(x + 2, y + h - 3, w - 4, 2);
+    }
+
+    // ── MAIN LOOP ─────────────────────────────────────────────────────────────
+    function loop() {
+      animId = requestAnimationFrame(loop);
+      g.waterT = (g.waterT || 0) + 0.016;
+      if (g.comboTimer > 0) g.comboTimer--;
+      if (g.comboTimer <= 0 && g.combo > 0) g.combo = 0;
+      if (g.catchCardAnim < 1) g.catchCardAnim = Math.min(1, (g.catchCardAnim || 0) + 0.07);
+      g.timer = (g.timer || 0) + 1;
+
+      // Particles
+      particles = particles.filter(p => {
+        p.life--;
+        if (p.type === 'spark') { p.x += p.vx; p.y += p.vy; p.vy += 0.15; }
+        if (p.type === 'popup') { p.y -= 0.4; }
+        if (p.type === 'ripple') { p.r += 1.5; }
+        return p.life > 0;
+      });
+
+      // Underwater fish
+      underwaterFish.forEach(uf => {
+        uf.x += uf.speed * uf.dir;
+        uf.t += 0.04;
+        if (uf.x > W + 20) uf.x = -20;
+        if (uf.x < -20) uf.x = W + 20;
+      });
+
+      // Clouds
+      clouds.forEach(c => { c.x += c.speed; if (c.x > W + c.w) c.x = -c.w; });
+
+      // Power cast charge
+      if (state === S.CAST_CHARGE) {
+        g.castPower = Math.min(1, (g.castPower || 0) + 0.015);
+        g.castChargeT++;
+      }
+
+      // Rain
+      if (rainDrops.length) {
+        rainDrops.forEach(rd => {
+          rd.y += rd.speed;
+          if (rd.y > H) { rd.y = -rd.len; rd.x = Math.random() * W; }
+        });
+      }
+
+      // State: CASTING
+      if (state === S.CASTING) {
+        g.castT++;
+        if (g.castT > 20) {
+          addParticle({ type: 'ripple', x: g.bobberX, y: getWaterY(g.bobberX), r: 3, life: 30, maxLife: 30 });
+          spawnSplash(g.bobberX, getWaterY(g.bobberX));
+          state = S.WAITING;
+        }
+      }
+
+      // State: WAITING for bite
+      if (state === S.WAITING) {
+        g.biteDelay--;
+        if (g.biteDelay <= 0) {
+          state = S.BITE;
+          g.timer = 0;
+          SFX.bite();
+          addPopup('⚡ BITE!', SDV.dangerGlow, g.bobberX, getWaterY(g.bobberX) - 15);
+        }
+      }
+
+      // State: BITE window
+      if (state === S.BITE) {
+        if (g.timer > 90) {
+          addPopup('TOO SLOW!', SDV.miss, W / 2, 90);
+          SFX.miss();
+          g.combo = 0;
+          state = S.MISS;
+          g.timer = 0;
+        }
+      }
+
+      // State: REEL
+      if (state === S.REEL) {
+        updateReel();
+      }
+
+      // Draw everything
+      draw();
     }
 
     function updateReel() {
       const r = g.reel;
       const fish = g.fish;
-      r.t++;
-
       const keys = (window as any)._deepReelKeys || {};
-      const spaceHeld = keys['Space'];
+      const reeling = keys['Space'] || keys['ArrowUp'] || keys['KeyW'];
 
-      // CURRENT SYSTEM: zone drifts left/right each tick
-      r.currentOffset += g.currentDir * g.currentStrength * 0.25;
-      r.currentOffset = Math.max(-20, Math.min(20, r.currentOffset));
-      // Zone X is affected by current
-      const baseZoneX = r.zoneX - r.currentOffset * 0.15;
+      // Fish behavior: move the zone position based on fight style
+      const t = g.waterT;
+      let zoneDrift = 0;
+      if (fish.fight === 'drift') {
+        zoneDrift = Math.sin(t * 1.2) * 0.3;
+      } else if (fish.fight === 'shake') {
+        zoneDrift = (Math.random() - 0.5) * 1.2;
+      } else if (fish.fight === 'surge') {
+        zoneDrift = Math.sin(t * 2.0) * 0.8 + (Math.random() - 0.5) * 0.5;
+      } else if (fish.fight === 'erratic') {
+        zoneDrift = (Math.random() - 0.5) * 2.5;
+      } else if (fish.fight === 'boss') {
+        zoneDrift = Math.sin(t * 3.0) * 1.2 + (Math.random() - 0.5) * 1.5;
+      }
+      r.zoneX = Math.max(0, Math.min(r.barW - r.zoneW, r.zoneX + zoneDrift * g.weather.speedMult));
 
-      const rs = reelSpeedMult();
-      if (spaceHeld) {
-        r.vel -= rs * 0.6;
-        if (r.t % 8 === 0) SFX.reel();
+      // Current drift on cursor
+      r.currentOffset = lerp(r.currentOffset, g.currentDir * g.currentStrength * 25, 0.04);
+
+      // Player cursor movement
+      const reelSpeed = 3.5 * reelSpeedMult();
+      if (reeling) {
+        r.vel += reelSpeed * 0.18;
+        if (Math.random() < 0.08) SFX.reel();
+      } else {
+        r.vel *= 0.88;
       }
 
-      // Fish AI fight
-      r.fishFightT++;
-      let fishForce = 0;
-      switch (fish.fight) {
-        case 'drift':   fishForce = Math.sin(r.fishFightT * 0.04) * r.speed; break;
-        case 'shake':   fishForce = (Math.random() - 0.5) * r.speed * 2.5; break;
-        case 'surge': {
-          const surge = r.fishFightT % 60 < 15 ? 1 : 0;
-          fishForce = surge * r.speed * 2.2 * (Math.random() < 0.5 ? 1 : -1);
-          break;
-        }
-        case 'erratic': fishForce = (Math.sin(r.fishFightT * 0.15) + (Math.random() - 0.5)) * r.speed * 2;  break;
-        case 'boss': {
-          fishForce = Math.sin(r.fishFightT * 0.08) * r.speed * 2.5;
-          if (r.fishFightT % 40 < 8) fishForce += (Math.random() - 0.5) * r.speed * 3;
-          break;
-        }
-      }
-      r.vel += fishForce * 0.12;
-      r.vel *= 0.85;
-
-      // Magnet
+      // Magnet pull
       const mag = magnetStrength();
       if (mag > 0) {
+        const baseZoneX = r.zoneX;
         const center = r.barW / 2;
         const diff = center - (r.cur + baseZoneX);
         r.vel += diff * mag * 0.018;
       }
+
       // Anchor pulse
       const anc = anchorStrength();
-      if (anc > 0 && r._anchorPulse <= 0 && r.t % 90 === 0) r._anchorPulse = 15;
-      if (r._anchorPulse > 0) {
+      if (anc > 0 && r._anchorPulse > 0) {
         r.vel *= (1 - anc * 0.1);
         r._anchorPulse--;
       }
 
       r.cur = Math.max(0, Math.min(r.barW, r.cur + r.vel));
+      const baseZoneX = r.zoneX;
       const inZone = r.cur >= baseZoneX && r.cur < baseZoneX + r.zoneW;
+
+      // ── TENSION BUG FIX ─────────────────────────────────────────────────────
+      // Original code had tension building far too fast (~0.7/frame out of zone).
+      // Now: base build is 0.15/frame * fish tier factor * tensionBuildMult.
+      // At 60fps, 100% tension takes ~10+ seconds without upgrades. Much more fair.
+      const tierFactor = 0.8 + fish.tier * 0.15; // tier 1=0.95, tier 2=1.1, tier 3=1.25, tier 4=1.4
+      const buildRate  = 0.15 * tierFactor * tensionBuildMult();
+      const drainRate  = 0.35 * tensionDrainMult();
+
       if (inZone) {
-        r.tension = Math.max(0, r.tension - 1.2 * tensionDrainMult());
-        r.success += 1.5;
-        if (!r._wasInZone) spawnRipple(g.bobberX, g.bobberY);
-      } else {
-        r.tension += (3.5 + fish.tier * 0.8) * tensionBuildMult();
-        // Danger fish snap line faster
+        r.tension = Math.max(0, r.tension - drainRate);
+        r.success += 1 * reelSpeedMult();
+        const zen = zenAutoRecover();
+        if (zen > 0 && r.tension > 60) r.tension -= zen * 0.5;
+        // Danger fish can snap line even in zone
         if (fish.danger) {
           let snapR = fish.snapRate;
           if (hasUpgrade('dangerrod')) snapR *= 0.6;
           if (Math.random() < snapR) {
-            // LINE SNAP from danger fish
-            addPopup('LINE SNAPPED! 💀', SDV.dmg, W / 2, 90);
+            addPopup('SNAP!', SDV.dangerGlow, W / 2, 90);
             SFX.snap();
             g.combo = 0;
-            state = S.MISS; g.timer = 0;
+            state = S.MISS;
+            g.timer = 0;
             return;
           }
         }
-        r.success = Math.max(0, r.success - 0.5);
+      } else {
+        r.tension = Math.min(100, r.tension + buildRate);
+        if (r.success > 0) r.success -= 0.3;
       }
-      r._wasInZone = inZone;
-      // Zen auto-recover
-      const zen = zenAutoRecover();
-      if (zen > 0 && r.tension > 60) r.tension -= zen * 0.5;
+
+      const zen2 = zenAutoRecover();
+      if (zen2 > 0 && r.tension > 60) r.tension -= zen2 * 0.5;
 
       if (r.tension >= 100) {
         addPopup('LINE BROKE!', SDV.dmg, W / 2, 90);
         SFX.miss();
         g.combo = 0;
-        state = S.MISS; g.timer = 0;
+        state = S.MISS;
+        g.timer = 0;
         return;
       }
+
       if (r.success >= r.duration) {
         catchFish();
       }
@@ -554,8 +676,8 @@ export default function App() {
       const fish = g.fish;
       const sc = calcScore(fish);
       g.zScore += sc.total;
-      g.score += sc.total;
-      g.coins += fish.coins;
+      g.score  += sc.total;
+      g.coins  += fish.coins;
       g.catchCount++;
       g.totalCatches++;
       g.consecutiveMisses = 0;
@@ -563,7 +685,6 @@ export default function App() {
       g.comboTimer = 180;
       if (!g.speciesCaught[fish.name]) g.speciesCaught[fish.name] = 0;
       g.speciesCaught[fish.name]++;
-      // TROPHY: first time catching this species
       if (!g.trophyWall[fish.name]) {
         g.trophyWall[fish.name] = { fish, score: sc.total, date: g.zone + 1 };
         g.newTrophyFish = fish;
@@ -575,7 +696,8 @@ export default function App() {
       if (fish.danger) addPopup('DANGER CATCH! 💀', SDV.dangerGlow, W / 2, 105);
       SFX.caught();
       g.catchCardAnim = 0;
-      state = S.CAUGHT; g.timer = 0;
+      state = S.CAUGHT;
+      g.timer = 0;
     }
 
     function calcScore(fish: any) {
@@ -605,7 +727,6 @@ export default function App() {
       if (hasUpgrade('luckrod')) mult *= (1 + g.castBonus * 0.3);
       g.firstFishZone = false;
       if (g.combo > 0) mult *= (1 + g.combo * 0.1);
-      // Danger fish: massive point bonus
       if (fish.danger) mult *= 2.0;
       mult *= scoreMult();
       const total = Math.round(base * mult);
@@ -613,28 +734,33 @@ export default function App() {
     }
 
     function nextCast() {
-      if (g.castsLeft <= 0 || g.zScore >= ZONES[g.zone].quota) {
+      if (g.castsLeft <= 0) {
         if (g.zScore >= ZONES[g.zone].quota) {
-          state = S.ZONE_CLEAR; g.timer = 0; SFX.zoneclear();
-        } else state = S.GAME_OVER;
+          state = S.ZONE_CLEAR;
+          g.timer = 0;
+          SFX.zoneclear();
+        } else {
+          state = S.GAME_OVER;
+        }
         return;
       }
       state = S.DEPTH;
       if (hasLure('charge') && g.catchCount > 0 && g.catchCount % 5 === 0) {
         const bf = pickFish(currentPool());
         const sc = calcScore(bf);
-        g.zScore += sc.total; g.score += sc.total;
-        g.coins += bf.coins;
+        g.zScore += sc.total;
+        g.score  += sc.total;
+        g.coins  += bf.coins;
         addPopup('⚡ DEPTH CHARGE! +' + sc.total, SDV.legendary, W / 2, 80);
       }
     }
 
     function openShop() {
-      const avLures = LURES.filter(l => !g.lures.some((e: any) => e.id === l.id));
+      const avLures    = LURES.filter(l => !g.lures.some((e: any) => e.id === l.id));
       const avUpgrades = ROD_UPGRADES.filter(u => !g.upgrades.some((e: any) => e.id === u.id));
-      g.shopLures = [...avLures].sort(() => Math.random() - 0.5).slice(0, 3);
+      g.shopLures    = [...avLures].sort(() => Math.random() - 0.5).slice(0, 3);
       g.shopUpgrades = [...avUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
-      g.shopBaits = [...BAIT_CATALOG].sort(() => Math.random() - 0.5).slice(0, 4);
+      g.shopBaits    = [...BAIT_CATALOG].sort(() => Math.random() - 0.5).slice(0, 4);
       g.shopTab = 0; g.shopSel = 0;
       state = S.SHOP;
     }
@@ -647,31 +773,36 @@ export default function App() {
 
     function shopBuy() {
       const items = shopPageItems();
-      const item = items[g.shopSel];
+      const item  = items[g.shopSel];
       if (!item) return;
-      if (g.coins < item.cost) { addPopup('NEED MORE COINS!', SDV.dmg, W / 2, 100); SFX.error(); return; }
+      if (g.coins < item.cost) { addPopup('NOT ENOUGH COINS!', SDV.dmg, W / 2, 100); SFX.error(); return; }
       if (g.shopTab === 0) {
         const existing = g.baits.find((b: any) => b.id === item.id);
         if (existing) { existing.usesLeft += item.uses; }
         else { g.baits.push({ ...item, usesLeft: item.uses }); }
         g.coins -= item.cost;
         addPopup('BAIT PURCHASED!', SDV.uncommon, W / 2, 100);
-        SFX.buy(); items.splice(g.shopSel, 1);
+        SFX.buy();
+        items.splice(g.shopSel, 1);
         if (g.shopSel >= items.length) g.shopSel = Math.max(0, items.length - 1);
       } else if (g.shopTab === 1) {
         if (g.upgrades.length >= 6) { addPopup('ROD SLOTS FULL!', SDV.dmg, W / 2, 100); return; }
         if (!hasUpgrade(item.id)) {
-          g.coins -= item.cost; g.upgrades.push(item);
+          g.coins -= item.cost;
+          g.upgrades.push(item);
           addPopup('ROD UPGRADED!', SDV.rare, W / 2, 100);
-          SFX.buy(); items.splice(g.shopSel, 1);
+          SFX.buy();
+          items.splice(g.shopSel, 1);
           if (g.shopSel >= items.length) g.shopSel = Math.max(0, items.length - 1);
         }
       } else {
         if (g.lures.length >= 5) { addPopup('LURE SLOTS FULL!', SDV.dmg, W / 2, 100); return; }
         if (!hasLure(item.id)) {
-          g.coins -= item.cost; g.lures.push(item);
+          g.coins -= item.cost;
+          g.lures.push(item);
           addPopup('LURE EQUIPPED!', SDV.epic, W / 2, 100);
-          SFX.buy(); items.splice(g.shopSel, 1);
+          SFX.buy();
+          items.splice(g.shopSel, 1);
           if (g.shopSel >= items.length) g.shopSel = Math.max(0, items.length - 1);
         }
       }
@@ -680,304 +811,108 @@ export default function App() {
     function leaveShop() {
       g.zone++;
       if (g.zone >= ZONES.length) { state = S.WIN; return; }
-      const z = ZONES[g.zone];
-      g.castsLeft = z.casts + (hasLure('chum') ? 2 : 0);
-      g.zScore = 0; g.catches = []; g.catchCount = 0;
-      g.firstFishZone = true; g.depthSel = 1;
-      g.combo = 0; g.comboTimer = 0;
-      g.weather = pickWeather();
+      const newZ   = ZONES[g.zone];
+      g.castsLeft  = newZ.casts + (hasLure('chum') ? 2 : 0);
+      g.zScore     = 0;
+      g.catchCount = 0;
+      g.firstFishZone = true;
+      g.depthSounderMult = 0;
+      g.weather    = pickWeather();
       if (g.weather.id === 'rainy' || g.weather.id === 'stormy') genRain();
       else rainDrops = [];
-      genStars(ZONES[g.zone].stars);
-      genClouds(ZONES[g.zone].cloudCount);
+      genStars(newZ.stars);
+      genClouds(newZ.cloudCount);
       genUnderwaterFish(g.zone);
       state = S.DEPTH;
     }
 
-    // ── PARTICLES ──────────────────────────────────────────────────────────────
-    function addPopup(text: string, col: string, x: number, y: number) {
-      particles.push({ type: 'popup', text, col, x, y: y || 100, vy: -0.7, life: 90, maxLife: 90 });
-    }
-    function spawnSplash(x: number, y: number, count: number, col: string) {
-      for (let i = 0; i < count; i++) {
-        particles.push({
-          type: 'splash', x, y, vx: (Math.random() - 0.5) * 2.5,
-          vy: -Math.random() * 2 - 0.5, col, size: 1 + Math.random() * 2,
-          life: 20 + Math.random() * 20, maxLife: 40,
-        });
-      }
-    }
-    function spawnRipple(x: number, y: number) {
-      particles.push({ type: 'ripple', x, y, r: 2, life: 30, maxLife: 30 });
-    }
-
-    // ── MAIN LOOP ──────────────────────────────────────────────────────────────
-    let last = 0, animId: number;
-    function loop(ts: number) {
-      const dt = Math.min(ts - last, 50); last = ts;
-      if (g.waterT !== undefined) g.waterT += (dt / 1000) * 0.8;
-      update(dt);
-      draw();
-      animId = requestAnimationFrame(loop);
-    }
-
-    function update(_dt: number) {
-      // Particles
-      particles.forEach((p: any) => {
-        if (p.type === 'popup') { p.y += p.vy; p.life--; }
-        else if (p.type === 'ripple') { p.r += 0.5; p.life--; }
-        else { p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life--; }
-      });
-      particles = particles.filter((p: any) => p.life > 0);
-      // Clouds
-      clouds.forEach((cl: any) => {
-        cl.x += cl.speed;
-        if (cl.x > W + cl.w) cl.x = -cl.w;
-      });
-      // Underwater fish
-      underwaterFish.forEach((uf: any) => {
-        uf.x += uf.speed * uf.dir;
-        uf.t += 0.05;
-        if (uf.x > W + 30) uf.x = -30;
-        if (uf.x < -30) uf.x = W + 30;
-      });
-      // Rain
-      rainDrops.forEach((rd: any) => {
-        rd.y += rd.speed;
-        rd.x += 0.5;
-        if (rd.y > H) { rd.y = 0; rd.x = Math.random() * W; }
-      });
-      // Combo timer
-      if (g.comboTimer > 0) { g.comboTimer--; if (g.comboTimer <= 0) g.combo = 0; }
-
-      // POWER CAST CHARGE
-      if (state === S.CAST_CHARGE) {
-        g.castChargeT++;
-        g.castPower = Math.min(1, g.castChargeT / 80);
-        return;
-      }
-
-      if (state === S.CASTING) {
-        g.castT = (g.castT || 0) + 1;
-        const dur = 35;
-        const t = Math.min(g.castT / dur, 1);
-        const sx = 96, sy = getWaterY(80) - 18;
-        const cpx = (sx + g.castAimX) / 2, cpy = Math.min(sy, g.castAimY) - 50;
-        g.bobberX = lerp(lerp(sx, cpx, t), lerp(cpx, g.castAimX, t), t);
-        g.bobberY = lerp(lerp(sy, cpy, t), lerp(cpy, g.castAimY, t), t);
-        if (g.castT >= dur + 15) {
-          g.bobberX = g.castAimX;
-          g.bobberY = getWaterY(g.castAimX);
-          spawnRipple(g.bobberX, g.bobberY);
-          state = S.WAITING; g.timer = 0;
-        }
-        return;
-      }
-      if (state === S.WAITING) {
-        g.timer++;
-        g.bobberY = getWaterY(g.bobberX);
-        if (g.timer >= g.biteDelay) { state = S.BITE; g.biteAnim = 0; }
-        return;
-      }
-      if (state === S.BITE) {
-        g.biteAnim++;
-        g.bobberY = getWaterY(g.bobberX) + Math.sin(g.biteAnim * 0.6) * 5;
-        if (g.biteAnim === 1) SFX.bite();
-        if (g.biteAnim === 8) spawnSplash(g.bobberX, g.bobberY, 12, SDV.waterFoam);
-        if (g.biteAnim > 28) startReel();
-        return;
-      }
-      if (state === S.REEL) updateReel();
-      if (state === S.CAUGHT || state === S.MISS) {
-        g.timer++;
-        if (state === S.CAUGHT && g.catchCardAnim < 1) g.catchCardAnim = Math.min(1, g.catchCardAnim + 0.06);
-        if (g.timer > 160) nextCast();
-      }
-      if (state === S.ZONE_CLEAR || state === S.GAME_OVER || state === S.WIN) g.timer++;
-    }
-
-    // ── DRAW ENGINE ───────────────────────────────────────────────────────────
+    // ── DRAW ──────────────────────────────────────────────────────────────────
     function draw() {
-      if (state === S.TITLE) { drawTitle(); return; }
-      if (state === S.WIN) { drawWin(); return; }
-      if (state === S.GAME_OVER) { drawGameOver(); return; }
-      if (state === S.SHOP) { drawShop(); return; }
-      if (state === S.TROPHY) { drawTrophyWall(); return; }
-      drawScene();
-      if (state === S.CAST_CHARGE) drawCastCharge();
-      else if (state === S.DEPTH) drawDepthSelect();
-      else if (state === S.CASTING || state === S.WAITING || state === S.BITE) drawFishing();
-      else if (state === S.REEL) drawReelState();
-      else if (state === S.CAUGHT) drawCaughtCard();
-      else if (state === S.MISS) drawMiss();
-      else if (state === S.ZONE_CLEAR) drawZoneClear();
+      drawBackground();
       drawParticles();
+      if (state === S.TITLE)       { drawTitle(); return; }
+      if (state === S.GAME_OVER)   { drawGameOver(); return; }
+      if (state === S.WIN)         { drawWin(); return; }
+      if (state === S.TROPHY)      { drawTrophyWall(); return; }
+      if (state === S.SHOP)        { drawShop(); return; }
+
       drawHUD();
+
+      if (state === S.DEPTH)       drawDepthSelect();
+      if (state === S.CAST_CHARGE) drawCastCharge();
+      if (state === S.CASTING || state === S.WAITING || state === S.BITE) drawFishing();
+      if (state === S.REEL)        drawReelState();
+      if (state === S.CAUGHT)      drawCaughtCard();
+      if (state === S.MISS)        drawMiss();
+      if (state === S.ZONE_CLEAR)  drawZoneClear();
     }
 
-    // ── SDV WOOD PANEL DRAWING ────────────────────────────────────────────────
-    function drawWoodBg(x: number, y: number, w: number, h: number) {
-      // Dark oak background
-      cx.fillStyle = SDV.oakDark;
-      cx.fillRect(x, y, w, h);
-      // Wood grain planks (horizontal)
-      const plankH = 8;
-      for (let py = y; py < y + h; py += plankH) {
-        const shade = Math.sin(py * 0.3) * 8;
-        cx.fillStyle = `rgba(${Math.max(0, shade > 0 ? 10 : 0)},${Math.max(0, shade > 0 ? 5 : 0)},0,${Math.abs(shade) / 40})`;
-        cx.fillRect(x, py, w, plankH - 1);
-        // Grain lines
-        cx.fillStyle = 'rgba(0,0,0,0.12)';
-        cx.fillRect(x, py + plankH - 1, w, 1);
-        // Knot textures (rare)
-        if ((py / plankH) % 7 === 3 && w > 50) {
-          cx.fillStyle = 'rgba(0,0,0,0.08)';
-          cx.fillRect(x + w * 0.3, py + 2, 6, 4);
-          cx.fillRect(x + w * 0.3 + 1, py + 1, 4, 6);
-        }
-      }
-      // Vertical plank dividers
-      const divCount = Math.max(2, Math.floor(w / 60));
-      for (let d = 1; d < divCount; d++) {
-        cx.fillStyle = 'rgba(0,0,0,0.25)';
-        cx.fillRect(x + Math.floor((w / divCount) * d), y, 1, h);
-      }
-    }
+    // ── BACKGROUND ────────────────────────────────────────────────────────────
+    function drawBackground() {
+      const zone = ZONES[Math.min(g.zone || 0, ZONES.length - 1)];
+      const sky   = zone.bgSky;
+      const water = zone.bgWater;
+      const waterY = getWaterY();
 
-    function drawWoodBorder(x: number, y: number, w: number, h: number, selected = false, highlight = false) {
-      // Outer shadow
-      cx.fillStyle = 'rgba(0,0,0,0.6)';
-      cx.fillRect(x + 2, y + 2, w, h);
-      // Border base
-      cx.fillStyle = selected ? SDV.legendary : highlight ? SDV.oakBezel : SDV.oakPlank;
-      cx.fillRect(x, y, w, h);
-      // Inner fill
-      drawWoodBg(x + 3, y + 3, w - 6, h - 6);
-      // Top highlight
-      cx.fillStyle = 'rgba(255,240,200,0.12)';
-      cx.fillRect(x + 3, y + 3, w - 6, 2);
-      // Bottom shadow
-      cx.fillStyle = 'rgba(0,0,0,0.25)';
-      cx.fillRect(x + 3, y + h - 5, w - 6, 2);
-      // Nail holes at corners
-      cx.fillStyle = SDV.oakDark;
-      cx.fillRect(x + 5, y + 5, 3, 3);
-      cx.fillRect(x + w - 8, y + 5, 3, 3);
-      cx.fillRect(x + 5, y + h - 8, 3, 3);
-      cx.fillRect(x + w - 8, y + h - 8, 3, 3);
-      // Nail highlights
-      cx.fillStyle = 'rgba(255,220,150,0.3)';
-      cx.fillRect(x + 5, y + 5, 1, 1);
-      cx.fillRect(x + w - 8, y + 5, 1, 1);
-      // Gold selection border
-      if (selected) {
-        cx.strokeStyle = SDV.legendary;
-        cx.lineWidth = 2;
-        cx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-      }
-    }
-
-
-
-    // ── SCENE DRAWING ─────────────────────────────────────────────────────────
-    function drawScene() {
-      const zone = ZONES[g.zone];
-      const sky = zone.bgSky;
       // Sky gradient
-      const grad = cx.createLinearGradient(0, 0, 0, getWaterY());
-      grad.addColorStop(0, sky[0]);
-      grad.addColorStop(0.6, sky[1]);
-      grad.addColorStop(1, sky[2]);
-      cx.fillStyle = grad; cx.fillRect(0, 0, W, H);
-
-      // WEATHER OVERLAY
-      if (g.weather.id === 'foggy') {
-        cx.fillStyle = 'rgba(180,200,210,0.18)';
-        cx.fillRect(0, 0, W, H);
-      } else if (g.weather.id === 'stormy') {
-        cx.fillStyle = 'rgba(20,30,40,0.35)';
-        cx.fillRect(0, 0, W, H);
-        // Lightning flicker occasionally
-        if (Math.random() < 0.003) {
-          cx.fillStyle = 'rgba(220,240,255,0.25)';
-          cx.fillRect(0, 0, W, H);
-        }
-      }
+      const grad = cx.createLinearGradient(0, 0, 0, waterY);
+      grad.addColorStop(0,   sky[0]);
+      grad.addColorStop(0.5, sky[1]);
+      grad.addColorStop(1,   sky[2]);
+      cx.fillStyle = grad;
+      cx.fillRect(0, 0, W, waterY + 2);
 
       // Stars
-      const t = g.waterT;
-      stars.forEach((s: any) => {
-        const twinkle = 0.4 + 0.6 * Math.abs(Math.sin(t * (0.5 + s.twinkleOff * 0.2) + s.twinkleOff));
-        cx.fillStyle = `rgba(255,255,255,${twinkle * 0.9})`;
+      const t = g.waterT || 0;
+      stars.forEach(s => {
+        const tw = Math.sin(t * 1.2 + s.twinkleOff);
+        cx.globalAlpha = 0.4 + tw * 0.3;
+        cx.fillStyle = '#FFFFFF';
         cx.fillRect(Math.round(s.x), Math.round(s.y), s.size, s.size);
+        cx.globalAlpha = 1;
       });
 
-      // Moon (deep zones)
-      if (g.zone >= 2) {
-        cx.fillStyle = '#D8E4F0';
-        cx.fillRect(W - 28, 8, 14, 14);
-        cx.fillStyle = 'rgba(180,210,230,0.3)';
-        cx.fillRect(W - 30, 6, 18, 18);
-        cx.fillStyle = sky[0];
-        cx.fillRect(W - 26, 8, 11, 11);
-        cx.fillStyle = 'rgba(200,220,255,0.15)';
-        cx.fillRect(W - 28, 6, 2, 16);
-      }
-
       // Clouds
-      clouds.forEach((cl: any) => {
-        cx.globalAlpha = cl.alpha * 0.8;
-        cx.fillStyle = g.weather.id === 'stormy' ? '#445566' : (g.weather.id === 'rainy' ? '#667788' : '#C8D8E8');
-        cx.fillRect(Math.round(cl.x), Math.round(cl.y), cl.w, cl.h);
-        cx.fillRect(Math.round(cl.x) + 5, Math.round(cl.y) - 4, cl.w - 10, cl.h * 0.6);
+      clouds.forEach(c => {
+        cx.globalAlpha = c.alpha * (g?.weather?.id === 'foggy' ? 1.5 : 1);
+        cx.fillStyle = g?.weather?.id === 'stormy' ? '#778899' : '#FFFFFF';
+        cx.fillRect(Math.round(c.x - c.w / 2), Math.round(c.y), Math.round(c.w), Math.round(c.h * 0.6));
+        cx.fillRect(Math.round(c.x - c.w / 3), Math.round(c.y - c.h * 0.3), Math.round(c.w * 0.7), Math.round(c.h));
         cx.globalAlpha = 1;
       });
 
       // Rain
-      if (g.weather.id === 'rainy' || g.weather.id === 'stormy') {
-        cx.strokeStyle = 'rgba(150,190,230,0.5)';
+      if (rainDrops.length) {
+        cx.strokeStyle = 'rgba(160,200,255,0.4)';
         cx.lineWidth = 1;
-        rainDrops.forEach((rd: any) => {
+        rainDrops.forEach(rd => {
           cx.beginPath();
           cx.moveTo(rd.x, rd.y);
-          cx.lineTo(rd.x + 1, rd.y + rd.len);
+          cx.lineTo(rd.x - 1, rd.y + rd.len);
           cx.stroke();
         });
       }
 
-      // Horizon wood dock plank
-      const waterY = getWaterY();
-      cx.fillStyle = SDV.oakPlank;
-      cx.fillRect(0, waterY - 5, W, 6);
-      cx.fillStyle = SDV.oakLight;
-      cx.fillRect(0, waterY - 5, W, 1);
-      cx.fillStyle = SDV.oakDark;
-      cx.fillRect(0, waterY, W, 2);
-      // Plank nails
-      for (let nx = 15; nx < W; nx += 30) {
-        cx.fillStyle = SDV.oakBezel;
-        cx.fillRect(nx, waterY - 4, 2, 3);
-      }
-
       // Water body
-      const waterGrad = cx.createLinearGradient(0, waterY, 0, H);
-      waterGrad.addColorStop(0, zone.bgWater[0]);
-      waterGrad.addColorStop(0.4, zone.bgWater[1]);
-      waterGrad.addColorStop(1, zone.bgWater[2]);
-      cx.fillStyle = waterGrad; cx.fillRect(0, waterY, W, H - waterY);
+      const wgrad = cx.createLinearGradient(0, waterY, 0, H);
+      wgrad.addColorStop(0,   water[0]);
+      wgrad.addColorStop(0.5, water[1]);
+      wgrad.addColorStop(1,   water[2]);
+      cx.fillStyle = wgrad;
+      cx.fillRect(0, waterY, W, H - waterY);
 
       // Water surface shimmer
-      for (let x = 0; x < W; x += 4) {
-        const wy = getWaterY(x, t);
-        const shimmer = Math.sin(x / 15 + t * 2) * 0.15 + 0.1;
-        cx.fillStyle = `rgba(180,230,255,${shimmer})`;
-        cx.fillRect(x, Math.round(wy) + 1, 2, 2);
+      cx.strokeStyle = 'rgba(168,216,248,0.35)';
+      cx.lineWidth = 1;
+      for (let wx = 0; wx < W; wx += 6) {
+        const wy = getWaterY(wx, t);
+        cx.beginPath(); cx.moveTo(wx, wy); cx.lineTo(wx + 4, wy); cx.stroke();
       }
 
-      // Underwater fish (ambient)
-      underwaterFish.forEach((uf: any) => {
+      // Underwater fish (decorative)
+      underwaterFish.forEach(uf => {
         cx.globalAlpha = uf.alpha;
-        const wobble = Math.sin(uf.t) * 1.5;
+        const wobble = Math.sin(uf.t * 2) * 1.5;
         const flip = uf.dir > 0 ? 1 : -1;
         cx.save();
         cx.translate(Math.round(uf.x), Math.round(uf.y + wobble));
@@ -989,114 +924,91 @@ export default function App() {
         cx.globalAlpha = 1;
       });
 
-      // Dock / fishing platform (SDV style)
+      // Dock
       const dockX = IS_MOBILE ? 20 : 18;
       const dockY = waterY - 12;
-      // Dock planks
       cx.fillStyle = SDV.oakPlank;
       cx.fillRect(dockX, dockY, 70, 14);
       cx.fillStyle = SDV.oakLight;
       cx.fillRect(dockX, dockY, 70, 2);
       cx.fillStyle = 'rgba(0,0,0,0.2)';
       cx.fillRect(dockX, dockY + 12, 70, 2);
-      // Plank lines
       for (let px = dockX + 14; px < dockX + 70; px += 14) {
-        cx.fillStyle = 'rgba(0,0,0,0.15)';
-        cx.fillRect(px, dockY, 1, 14);
+        cx.fillStyle = SDV.oakDark; cx.fillRect(px, dockY, 1, 14);
       }
       // Dock posts
       cx.fillStyle = SDV.oakMid;
-      cx.fillRect(dockX + 10, dockY + 12, 6, 20);
-      cx.fillRect(dockX + 50, dockY + 12, 6, 20);
-      cx.fillStyle = SDV.oakPlank;
-      cx.fillRect(dockX + 10, dockY + 12, 6, 2);
-      cx.fillRect(dockX + 50, dockY + 12, 6, 2);
+      cx.fillRect(dockX + 4,  dockY + 14, 6, 10);
+      cx.fillRect(dockX + 60, dockY + 14, 6, 10);
 
-      // Fisher character (SDV-inspired pixel art)
-      const charX = dockX + 22;
-      const charY = dockY - 2;
-      // Boots
-      cx.fillStyle = '#3A2010';
-      cx.fillRect(charX + 2, charY + 14, 5, 4);
-      cx.fillRect(charX + 9, charY + 14, 5, 4);
-      // Pants
-      cx.fillStyle = '#4878B0';
-      cx.fillRect(charX + 2, charY + 8, 13, 8);
-      // Shirt
-      cx.fillStyle = '#C85028';
-      cx.fillRect(charX + 2, charY + 2, 13, 8);
-      // Suspenders
-      cx.fillStyle = SDV.oakBezel;
-      cx.fillRect(charX + 4, charY + 2, 2, 8);
-      cx.fillRect(charX + 11, charY + 2, 2, 8);
-      // Head
-      cx.fillStyle = '#E8C090';
-      cx.fillRect(charX + 4, charY - 6, 9, 9);
-      // Hat (SDV farmer hat)
-      cx.fillStyle = SDV.oakPlank;
-      cx.fillRect(charX + 2, charY - 8, 13, 4);
-      cx.fillRect(charX + 5, charY - 12, 7, 5);
-      cx.fillStyle = SDV.oakLight;
-      cx.fillRect(charX + 2, charY - 8, 13, 1);
-      // Eyes
-      cx.fillStyle = '#1A0E04';
-      cx.fillRect(charX + 6, charY - 4, 2, 2);
-      cx.fillRect(charX + 10, charY - 4, 2, 2);
-      // Rod
-      cx.fillStyle = SDV.oakLight;
-      cx.fillRect(charX + 12, charY - 10, 2, 20);
-      cx.fillRect(charX + 14, charY - 10, 10, 2);
-      // Line to bobber
-      if (g.bobberX && (state === S.WAITING || state === S.CASTING || state === S.BITE || state === S.REEL)) {
-        cx.strokeStyle = 'rgba(200,200,200,0.7)';
-        cx.lineWidth = 0.5;
+      // Bobber & line
+      if (state === S.CASTING || state === S.WAITING || state === S.BITE || state === S.REEL) {
+        const bx = g.bobberX, by = getWaterY(g.bobberX);
+        // Line from dock tip
+        cx.strokeStyle = 'rgba(200,180,140,0.7)';
+        cx.lineWidth = 1;
         cx.beginPath();
-        cx.moveTo(charX + 24, charY - 9);
-        cx.lineTo(g.bobberX, g.bobberY);
+        cx.moveTo(dockX + 68, dockY + 2);
+        cx.lineTo(bx, by);
         cx.stroke();
         // Bobber
-        cx.fillStyle = state === S.BITE ? SDV.dangerGlow : '#E03020';
-        cx.fillRect(Math.round(g.bobberX) - 3, Math.round(g.bobberY) - 3, 6, 6);
-        cx.fillStyle = '#F8F0F0';
-        cx.fillRect(Math.round(g.bobberX) - 3, Math.round(g.bobberY) - 3, 6, 3);
-        cx.fillStyle = SDV.parchment;
-        cx.fillRect(Math.round(g.bobberX) - 1, Math.round(g.bobberY) - 1, 2, 2);
+        const bobberBob = Math.sin((g.waterT || 0) * 3) * 2;
+        cx.fillStyle = '#E03020';
+        cx.fillRect(Math.round(bx - 3), Math.round(by - 6 + bobberBob), 6, 6);
+        cx.fillStyle = '#F5E6C8';
+        cx.fillRect(Math.round(bx - 3), Math.round(by - 3 + bobberBob), 6, 3);
+        cx.fillStyle = SDV.oakDark;
+        cx.fillRect(Math.round(bx - 1), Math.round(by - 8 + bobberBob), 2, 3);
+        // Bite animation
+        if (state === S.BITE && Math.floor((g.waterT || 0) * 6) % 2 === 0) {
+          cx.fillStyle = SDV.dangerGlow;
+          cx.fillRect(Math.round(bx - 4), Math.round(by - 4 + bobberBob), 8, 1);
+        }
       }
-
-      // Weather badge top-right
-      drawWeatherBadge();
-    }
-
-    function drawWeatherBadge() {
-      const w = g.weather;
-      const bx = W - 52, by = 4;
-      drawWoodBorder(bx, by, 50, 16);
-      drawText(w.label, 4, bx + 4, by + 11, w.id === 'calm' ? SDV.uiGreen : w.id === 'stormy' ? '#FF8080' : w.id === 'rainy' ? '#80C0FF' : '#C0C0C0', 'left');
     }
 
     // ── DEPTH SELECT ──────────────────────────────────────────────────────────
     function drawDepthSelect() {
-      const wy = IS_MOBILE ? 220 : 88;
-      // Panel
-      drawWoodBorder(8, wy - 8, W - 16, 100);
-      drawText('SELECT DEPTH', 5, W / 2, wy + 2, SDV.parchDark, 'center');
+      const wy = IS_MOBILE ? 196 : 74;
+      drawWoodBorder(8, wy, W - 16, IS_MOBILE ? 80 : 70);
+      drawText('CHOOSE DEPTH', 4, W / 2, wy + 12, SDV.parchDark, 'center');
+      const labels = ['SHALLOW', 'MEDIUM', 'DEEP'];
       const bw = IS_MOBILE ? 86 : 78;
       const gap = IS_MOBILE ? 95 : 82;
       const ox = IS_MOBILE ? 14 : 22;
-      const labels = ['SHALLOW', 'MIDDLE', 'DEEP'];
-      const icons = ['🌿', '🐟', '🦑'];
-      for (let i = 0; i < 3; i++) {
+      labels.forEach((label, i) => {
+        const bx = ox + i * gap;
         const sel = g.depthSel === i;
-        drawWoodBorder(ox + i * gap, wy + 8, bw, 42, sel);
-        cx.fillStyle = sel ? 'rgba(248,200,32,0.12)' : 'rgba(0,0,0,0)';
-        cx.fillRect(ox + i * gap + 3, wy + 11, bw - 6, 36);
-        drawText(icons[i], 7, ox + i * gap + bw / 2, wy + 28, SDV.parchment, 'center');
-        drawText(labels[i], 4, ox + i * gap + bw / 2, wy + 40, sel ? SDV.legendary : SDV.parchDark, 'center');
-      }
+        drawWoodBorder(bx, wy + 20, bw, IS_MOBILE ? 40 : 36, sel, sel);
+        if (sel) { cx.fillStyle = 'rgba(255,200,50,0.08)'; cx.fillRect(bx + 2, wy + 22, bw - 4, IS_MOBILE ? 36 : 32); }
+        drawText(label, IS_MOBILE ? 4 : 3, bx + bw / 2, wy + (IS_MOBILE ? 36 : 32), sel ? SDV.legendary : SDV.parchment, 'center');
+        const poolLabel = i === 0 ? 'POND' : i === 1 ? 'COVE' : 'DEEP';
+        drawText(poolLabel, 3, bx + bw / 2, wy + (IS_MOBILE ? 50 : 44), SDV.parchFaded, 'center');
+      });
+
+      // Rod upgrades
+      const by1 = IS_MOBILE ? 286 : 152;
+      drawWoodBorder(8, by1 - 2, W - 16, 22);
+      drawText('ROD:', 4, 14, by1 + 12, SDV.parchFaded, 'left');
+      g.upgrades.forEach((u: any, i: number) => {
+        drawWoodBorder(42 + i * 44, by1 + 2, 40, 14);
+        cx.fillStyle = u.col; cx.fillRect(44 + i * 44, by1 + 4, 36, 10);
+        drawText(u.name.slice(0, 4), 3, 46 + i * 44, by1 + 12, SDV.parchment, 'left');
+      });
+
+      // Lures
+      const by1b = IS_MOBILE ? 312 : 178;
+      drawWoodBorder(8, by1b - 2, W - 16, 22);
+      drawText('LURE:', 4, 14, by1b + 12, SDV.parchFaded, 'left');
+      g.lures.forEach((l: any, i: number) => {
+        drawWoodBorder(48 + i * 54, by1b + 2, 48, 14);
+        cx.fillStyle = l.col; cx.fillRect(50 + i * 54, by1b + 4, 44, 10);
+        drawText(l.name.slice(0, 5), 3, 52 + i * 54, by1b + 12, SDV.parchment, 'left');
+      });
+
       // Bait row
-      const by2 = IS_MOBILE ? 345 : 158;
-      drawWoodBorder(8, by2 - 2, W - 16, 28);
-      drawText('BAIT:', 4, 14, by2 + 12, SDV.parchDark, 'left');
+      const by2 = IS_MOBILE ? 340 : 158;
+      drawText('BAIT:', 4, 14, by2 + 12, SDV.parchFaded, 'left');
       g.baits.forEach((b: any, i: number) => {
         const bx = 45 + i * 58;
         const sel = g.activeBait === i;
@@ -1105,13 +1017,13 @@ export default function App() {
         drawText('x' + b.usesLeft, 4, bx + 40, by2 + 14, SDV.coin, 'left');
       });
       if (g.baits.length === 0) drawText('NONE', 4, 48, by2 + 12, SDV.parchFaded, 'left');
-      // Power cast hint
+
       const hintY = IS_MOBILE ? 388 : 192;
       drawText('HOLD SPACE = POWER CAST', 4, W / 2, hintY, SDV.parchFaded, 'center');
-      // Zone info
+
       const zoneY = IS_MOBILE ? 400 : 204;
       drawText(ZONES[g.zone].name, 4, W / 2, zoneY, SDV.parchDark, 'center');
-      // Trophy button
+
       const tby = IS_MOBILE ? 418 : 218;
       drawWoodBorder(W - 68, tby - 10, 62, 16);
       drawText('🏆 WALL', 4, W - 62, tby, SDV.legendary, 'left');
@@ -1122,7 +1034,6 @@ export default function App() {
       const wy = IS_MOBILE ? 180 : 60;
       drawWoodBorder(W / 2 - 60, wy, 120, 50);
       drawText('CHARGING...', 5, W / 2, wy + 14, SDV.parchDark, 'center');
-      // Power bar
       const bx = W / 2 - 48, by = wy + 20;
       cx.fillStyle = SDV.oakDark;
       cx.fillRect(bx, by, 96, 12);
@@ -1130,8 +1041,7 @@ export default function App() {
       const powerCol = g.castPower > 0.8 ? SDV.legendary : g.castPower > 0.5 ? SDV.uncommon : SDV.rare;
       cx.fillStyle = powerCol;
       cx.fillRect(bx, by, pw, 12);
-      cx.strokeStyle = SDV.oakBezel;
-      cx.lineWidth = 1;
+      cx.strokeStyle = SDV.oakBezel; cx.lineWidth = 1;
       cx.strokeRect(bx, by, 96, 12);
       drawText(Math.round(g.castPower * 100) + '%', 5, W / 2, by + 10, SDV.parchment, 'center');
       drawText('RELEASE TO CAST!', 4, W / 2, wy + 44, SDV.parchFaded, 'center');
@@ -1139,73 +1049,61 @@ export default function App() {
 
     // ── FISHING STATE ─────────────────────────────────────────────────────────
     function drawFishing() {
-      const hints: Record<string, string> = {
+      const hints: Record<number, string> = {
         [S.CASTING]: 'CASTING...',
         [S.WAITING]: 'WAITING FOR BITE...',
-        [S.BITE]: '⚡ BITE! PRESS SPACE! ⚡',
+        [S.BITE]:    '⚡ BITE! PRESS SPACE! ⚡',
       };
       const hintY = IS_MOBILE ? 390 : 200;
-      const col = state === S.BITE ? SDV.dangerGlow : SDV.parchDark;
+      const col   = state === S.BITE ? SDV.dangerGlow : SDV.parchDark;
       drawWoodBorder(8, hintY - 10, W - 16, 20);
       drawText(hints[state] || '', 4, W / 2, hintY + 4, col, 'center');
     }
 
     // ── REEL STATE ────────────────────────────────────────────────────────────
     function drawReelState() {
-      const r = g.reel;
+      const r    = g.reel;
       const fish = g.fish;
       const panelY = IS_MOBILE ? H - 140 : 170;
       drawWoodBorder(8, panelY - 8, W - 16, 70);
 
-      // Fish name
       const nameCol = fish.danger ? SDV.dangerGlow : fish.tier === 4 ? SDV.legendary : SDV.parchment;
-      if (fish.danger) {
-        // Flashing danger warning
-        if (Math.floor(g.waterT * 4) % 2 === 0) {
-          drawText('💀 DANGER FISH! 💀', 5, W / 2, panelY + 4, SDV.dangerGlow, 'center');
-        } else {
-          drawText(fish.name, 5, W / 2, panelY + 4, nameCol, 'center');
-        }
+      if (fish.danger && Math.floor(g.waterT * 4) % 2 === 0) {
+        drawText('💀 DANGER FISH! 💀', 5, W / 2, panelY + 4, SDV.dangerGlow, 'center');
       } else {
         drawText(fish.name, 5, W / 2, panelY + 4, nameCol, 'center');
       }
 
-      // Reel bar (SDV style)
-      const barX = r.barX, barY = r.barY, barW = r.barW, barH = r.barH;
-      // Bar background (wood)
+      const { barX, barY, barW, barH } = r;
       drawWoodBg(barX - 2, barY - 2, barW + 4, barH + 4);
       cx.fillStyle = SDV.oakDark;
       cx.fillRect(barX, barY, barW, barH);
-      // Zone (catch zone - green)
-      cx.fillStyle = 'rgba(80,200,80,0.35)';
+
       const czo = r.currentOffset * 0.15;
+      cx.fillStyle = 'rgba(80,200,80,0.35)';
       cx.fillRect(barX + Math.max(0, r.zoneX - czo), barY, r.zoneW, barH);
       cx.fillStyle = 'rgba(100,255,100,0.5)';
       cx.fillRect(barX + Math.max(0, r.zoneX - czo), barY, r.zoneW, 2);
       cx.fillRect(barX + Math.max(0, r.zoneX - czo), barY + barH - 2, r.zoneW, 2);
-      // Current direction indicator
-      const curArrow = r.currentOffset > 2 ? '→' : r.currentOffset < -2 ? '←' : '•';
-      drawText('CURRENT: ' + curArrow, 4, barX + barW + 4, barY + 8, SDV.waterFoam, 'left');
+
+      const curArrow = r.currentOffset > 2 ? '→' : r.currentOffset < -2 ? '←' : '—';
+      drawText('CUR ' + curArrow, 3, barX + barW + 4, barY + barH / 2 + 2, SDV.parchFaded, 'left');
+
       // Cursor
-      const cursorX = barX + Math.max(0, Math.min(barW, r.cur));
-      cx.fillStyle = SDV.parchment;
-      cx.fillRect(cursorX - 2, barY - 4, 4, barH + 8);
+      const cursorX = barX + Math.round(r.cur);
+      cx.fillStyle = '#FFFFFF';
+      cx.fillRect(cursorX - 1, barY - 3, 3, barH + 6);
       cx.fillStyle = SDV.legendary;
-      cx.fillRect(cursorX - 1, barY - 3, 2, barH + 6);
-      cx.strokeStyle = SDV.oakDark;
-      cx.lineWidth = 1;
-      cx.strokeRect(barX, barY, barW, barH);
+      cx.fillRect(cursorX - 1, barY - 3, 3, 3);
+      cx.fillRect(cursorX - 1, barY + barH, 3, 3);
 
       // Tension bar
       const tenY = barY + barH + 6;
-      cx.fillStyle = SDV.oakDark;
-      cx.fillRect(barX, tenY, barW, 8);
       const tenW = Math.floor(barW * r.tension / 100);
       const tenCol = r.tension > 75 ? SDV.danger : r.tension > 45 ? SDV.coin : SDV.uncommon;
       cx.fillStyle = tenCol;
       cx.fillRect(barX, tenY, tenW, 8);
-      cx.strokeStyle = SDV.oakPlank;
-      cx.lineWidth = 1;
+      cx.strokeStyle = SDV.oakPlank; cx.lineWidth = 1;
       cx.strokeRect(barX, tenY, barW, 8);
       drawText('LINE', 4, barX - 2, tenY + 7, SDV.parchFaded, 'right');
 
@@ -1215,36 +1113,30 @@ export default function App() {
       cx.fillRect(barX, progY, barW, 5);
       cx.fillStyle = SDV.uiGreen;
       cx.fillRect(barX, progY, Math.floor(barW * r.success / r.duration), 5);
-      cx.strokeStyle = SDV.oakPlank;
-      cx.lineWidth = 1;
+      cx.strokeStyle = SDV.oakPlank; cx.lineWidth = 1;
       cx.strokeRect(barX, progY, barW, 5);
 
-      // Fish drawing in the corner (SDV style)
       drawFishSprite(fish, W - 35, panelY + 12, g.waterT, 1.2);
-
       drawText('HOLD SPACE TO REEL', 4, W / 2, panelY + 58, SDV.parchFaded, 'center');
     }
 
-    // ── CAUGHT CARD (SDV Trophy-style) ────────────────────────────────────────
+    // ── CAUGHT CARD ───────────────────────────────────────────────────────────
     function drawCaughtCard() {
-      const fish = g.fish;
-      const anim = g.catchCardAnim;
+      const fish  = g.fish;
+      const anim  = g.catchCardAnim;
       const cardW = W - 30;
       const cardH = IS_MOBILE ? 80 : 70;
       const cardX = 15;
-      const cardY = IS_MOBILE ? H / 2 - cardH / 2 : H / 2 - cardH / 2;
+      const cardY = H / 2 - cardH / 2;
       cx.globalAlpha = anim;
-      // Card (SDV parchment style)
       cx.fillStyle = 'rgba(0,0,0,0.6)';
       cx.fillRect(cardX + 2, cardY + 2, cardW, cardH);
       drawWoodBorder(cardX, cardY, cardW, cardH, false, true);
-      // Parchment inner
       cx.fillStyle = '#2A1A08';
       cx.fillRect(cardX + 6, cardY + 6, cardW - 12, cardH - 12);
       cx.fillStyle = 'rgba(200,160,80,0.08)';
       cx.fillRect(cardX + 6, cardY + 6, cardW - 12, cardH - 12);
 
-      // NEW TROPHY indicator
       if (g.newTrophyFish && g.newTrophyFish.name === fish.name) {
         drawText('★ NEW TROPHY! ★', 5, W / 2, cardY + 16, SDV.legendary, 'center');
       } else {
@@ -1252,25 +1144,19 @@ export default function App() {
         drawText(fish.name, fish.tier >= 3 ? 6 : 5, W / 2, cardY + 16, col, 'center');
       }
 
-      // Fish sprite centered
       drawFishSprite(fish, W / 2 - 20, cardY + cardH / 2 + 4, g.waterT, 1.5);
-
-      // Score
       const sc = Math.round(fish.pts * 1.2);
       drawText('+' + (g.zScore > 0 ? sc : '??'), 7, W / 2 + 30, cardY + cardH / 2 + 8, SDV.coin, 'center');
-
-      // Rarity label
       const rarities = ['', 'COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'];
-      const rarCol = [SDV.parchFaded, SDV.parchDark, SDV.uncommon, SDV.epic, SDV.legendary];
+      const rarCol   = [SDV.parchFaded, SDV.parchDark, SDV.uncommon, SDV.epic, SDV.legendary];
       drawText(rarities[fish.tier] || '', 4, W / 2, cardY + cardH - 10, rarCol[fish.tier], 'center');
-
       cx.globalAlpha = 1;
       drawText('TAP / SPACE TO CONTINUE', 4, W / 2, cardY + cardH + 10, SDV.parchFaded, 'center');
     }
 
     // ── MISS ──────────────────────────────────────────────────────────────────
     function drawMiss() {
-      const wy = IS_MOBILE ? H / 2 - 20 : H / 2 - 20;
+      const wy = H / 2 - 20;
       drawWoodBorder(W / 2 - 70, wy, 140, 40);
       drawText('MISSED!', 8, W / 2, wy + 16, SDV.dmg, 'center');
       drawText('TAP TO CONTINUE', 4, W / 2, wy + 30, SDV.parchFaded, 'center');
@@ -1282,71 +1168,59 @@ export default function App() {
       drawWoodBorder(8, wy, W - 16, IS_MOBILE ? 160 : 140);
       drawText('ZONE CLEARED!', 7, W / 2, wy + 14, SDV.uiGreenLt, 'center');
       drawText(ZONES[g.zone].name, 4, W / 2, wy + 26, SDV.parchDark, 'center');
-      drawText('SCORE: ' + g.zScore, 5, W / 2, wy + 42, SDV.coin, 'center');
+      drawText('SCORE: ' + g.zScore,   5, W / 2, wy + 42, SDV.coin, 'center');
       drawText('CATCHES: ' + g.catchCount, 4, W / 2, wy + 56, SDV.parchDark, 'center');
-      drawText('COINS: ' + g.coins, 4, W / 2, wy + 68, SDV.coin, 'center');
-      // New zone weather preview
+      drawText('COINS: ' + g.coins,    4, W / 2, wy + 68, SDV.coin, 'center');
+
       const nextZone = g.zone + 1 < ZONES.length ? ZONES[g.zone + 1] : null;
-      if (nextZone) drawText('NEXT: ' + nextZone.name, 4, W / 2, wy + 80, SDV.parchFaded, 'center');
-      // Shop button (SDV style)
-      const by = wy + (IS_MOBILE ? 110 : 100);
-      drawWoodBorder(W / 2 - 60, by, 120, 22, false, true);
-      drawText('VISIT SHOP →', 5, W / 2, by + 15, SDV.legendary, 'center');
-    }
-
-    // ── SHOP (SDV Marnie's Ranch / Pierre style) ──────────────────────────────
-    function drawShop() {
-      // Full wood background
-      drawWoodBg(0, 0, W, H);
-      // Top banner
-      drawWoodBorder(0, 0, W, 30);
-      drawText("WILLY'S BAIT SHOP", 6, W / 2, 19, SDV.legendary, 'center');
-      // Coin display
-      drawText('🪙 ' + g.coins, 5, W - 8, 20, SDV.coin, 'right');
-
-      // Tab bar (SDV style)
-      const tabY = 32;
-      const tabLabels = ['BAIT', 'UPGRADES', 'LURES'];
-      const tabW = Math.floor(W / 3);
-      for (let i = 0; i < 3; i++) {
-        const sel = g.shopTab === i;
-        drawWoodBorder(i * tabW, tabY, tabW, 18, sel);
-        if (sel) {
-          cx.fillStyle = 'rgba(248,200,32,0.15)';
-          cx.fillRect(i * tabW + 3, tabY + 3, tabW - 6, 12);
-        }
-        drawText(tabLabels[i], 4, i * tabW + tabW / 2, tabY + 13, sel ? SDV.legendary : SDV.parchDark, 'center');
+      if (nextZone) {
+        drawText('NEXT: ' + nextZone.name, 4, W / 2, wy + 82, SDV.parchFaded, 'center');
       }
 
-      // Items grid
-      const items = shopPageItems();
-      const colCount = IS_MOBILE ? 2 : 2;
-      const itemW = IS_MOBILE ? 148 : 148;
-      const itemH = IS_MOBILE ? 68 : 62;
+      const by3 = IS_MOBILE ? 350 : 175;
+      drawWoodBorder(W / 2 - 60, by3, 120, 24, false, true);
+      drawText('VISIT SHOP', 5, W / 2, by3 + 16, SDV.legendary, 'center');
+      drawText('(SPACE / TAP)', 4, W / 2, by3 + 34, SDV.parchFaded, 'center');
+    }
+
+    // ── SHOP ──────────────────────────────────────────────────────────────────
+    function drawShop() {
+      drawWoodBg(0, 0, W, H);
+      drawWoodBorder(0, 0, W, 30);
+      drawText('🎣 SHOP', 6, W / 2, 20, SDV.legendary, 'center');
+      drawText('COINS: ' + g.coins, 4, W - 8, 20, SDV.coin, 'right');
+
+      const tabs = ['BAIT', 'ROD', 'LURE'];
+      const tabW = Math.floor(W / 3);
+      tabs.forEach((tab, i) => {
+        const sel = g.shopTab === i;
+        drawWoodBorder(i * tabW, 32, tabW, 18, sel, sel);
+        drawText(tab, 4, i * tabW + tabW / 2, 44, sel ? SDV.legendary : SDV.parchment, 'center');
+      });
+
+      const items    = shopPageItems();
+      const colCount = 2;
+      const itemW    = IS_MOBILE ? 148 : 148;
+      const itemH    = IS_MOBILE ? 68 : 62;
       const itemStartY = 54;
-      const gapX = IS_MOBILE ? 8 : 8;
-      const startX = IS_MOBILE ? 8 : 8;
+      const gapX = 8, startX = 8;
 
       items.forEach((item: any, i: number) => {
-        const col = i % colCount;
-        const row = Math.floor(i / colCount);
-        const bx = startX + col * (itemW + gapX);
-        const by = itemStartY + row * (itemH + 4);
+        const col    = i % colCount;
+        const row    = Math.floor(i / colCount);
+        const bx     = startX + col * (itemW + gapX);
+        const by     = itemStartY + row * (itemH + 4);
         const canBuy = g.coins >= item.cost;
-        const sel = g.shopSel === i;
+        const sel    = g.shopSel === i;
         drawWoodBorder(bx, by, itemW, itemH, sel, canBuy);
         if (!canBuy) { cx.fillStyle = 'rgba(0,0,0,0.4)'; cx.fillRect(bx + 3, by + 3, itemW - 6, itemH - 6); }
-        // Item icon area
         cx.fillStyle = SDV.oakDark;
         cx.fillRect(bx + 6, by + 6, 24, 24);
         drawItemPixelIcon(bx + 18, by + 18, item, g.shopTab);
-        // Name
         const nameLines = wrapText(item.name, 14);
-        nameLines.forEach((line, li) => drawText(line, 4, bx + 34, by + 13 + li * 9, SDV.parchment, 'left'));
-        // Desc (tiny)
+        nameLines.forEach((line: string, li: number) => drawText(line, 4, bx + 34, by + 13 + li * 9, SDV.parchment, 'left'));
         const descLines = wrapText(item.desc, 20);
-        descLines.slice(0, 2).forEach((line, li) => drawText(line, 3, bx + 6, by + 38 + li * 8, SDV.parchFaded, 'left'));
-        // Cost badge
+        descLines.slice(0, 2).forEach((line: string, li: number) => drawText(line, 3, bx + 6, by + 38 + li * 8, SDV.parchFaded, 'left'));
         cx.fillStyle = canBuy ? SDV.coin : SDV.parchFaded;
         cx.fillRect(bx + itemW - 36, by + itemH - 14, 30, 11);
         cx.fillStyle = SDV.oakDark;
@@ -1359,7 +1233,6 @@ export default function App() {
         drawText('SOLD OUT!', 7, W / 2, 85, SDV.parchFaded, 'center');
       }
 
-      // Bottom buttons
       const bottomY = IS_MOBILE ? H - 50 : 208;
       drawWoodBorder(8, bottomY, 100, 18, false, false);
       drawText('LEAVE SHOP', 4, 58, bottomY + 12, SDV.parchDark, 'center');
@@ -1391,53 +1264,41 @@ export default function App() {
         drawText('CATCH NEW FISH SPECIES', 4, W / 2, 76, SDV.parchFaded, 'center');
       } else {
         const cols = 3;
-        const tw = (W - 16) / cols;
-        const th = 58;
+        const tw   = (W - 16) / cols;
+        const th   = 58;
         trophies.forEach(([name, data], i) => {
           const col = i % cols;
           const row = Math.floor(i / cols);
-          const tx = 8 + col * tw;
-          const ty = 28 + row * (th + 4);
-          // Trophy plaque
+          const tx  = 8 + col * tw;
+          const ty  = 28 + row * (th + 4);
           drawWoodBorder(tx, ty, tw - 4, th, false, true);
-          // Fish sprite
           drawFishSprite(data.fish, tx + tw / 2 - 10, ty + 20, g.waterT || 0, 0.9);
-          // Name
           const shortName = name.split(' ')[0];
           drawText(shortName, 4, tx + tw / 2 - 2, ty + 36, data.fish.danger ? SDV.dangerGlow : SDV.parchDark, 'center');
-          // Zone caught
           drawText('Z' + data.date, 3, tx + tw / 2 - 2, ty + 46, SDV.parchFaded, 'center');
-          // Rarity star
           const stars2 = '★'.repeat(data.fish.tier);
           drawText(stars2, 4, tx + tw / 2 - 2, ty + 56, SDV.legendary, 'center');
         });
       }
-      const countY = H - 20;
-      drawText(trophies.length + '/' + FISH_LIST.length + ' SPECIES', 4, W / 2, countY, SDV.parchDark, 'center');
+      drawText(trophies.length + '/' + FISH_LIST.length + ' SPECIES', 4, W / 2, H - 20, SDV.parchDark, 'center');
       drawText('PRESS SPACE / TAP TO RETURN', 4, W / 2, H - 8, SDV.parchFaded, 'center');
     }
 
     // ── HUD ───────────────────────────────────────────────────────────────────
     function drawHUD() {
-      // Top HUD bar (SDV style)
       drawWoodBorder(0, 0, W, 18);
-      // Score
       drawText(g.score.toLocaleString(), 5, 6, 13, SDV.coin, 'left');
-      // Zone progress bar
       const prog = Math.min(1, g.zScore / ZONES[g.zone].quota);
       const barW = 80, barX = W / 2 - barW / 2;
       cx.fillStyle = SDV.oakDark;
       cx.fillRect(barX, 4, barW, 9);
       cx.fillStyle = SDV.uiGreen;
       cx.fillRect(barX, 4, Math.floor(barW * prog), 9);
-      cx.strokeStyle = SDV.oakBezel;
-      cx.lineWidth = 1;
+      cx.strokeStyle = SDV.oakBezel; cx.lineWidth = 1;
       cx.strokeRect(barX, 4, barW, 9);
       drawText(g.zScore + '/' + ZONES[g.zone].quota, 3, W / 2, 12, SDV.parchment, 'center');
-      // Casts & coins
       drawText('🎣' + g.castsLeft, 4, W - 58, 13, SDV.parchDark, 'left');
       drawText('🪙' + g.coins, 4, W - 30, 13, SDV.coin, 'left');
-      // Combo
       if (g.combo > 1) {
         drawText('x' + g.combo + ' COMBO!', 4, W / 2, IS_MOBILE ? H - 8 : H - 4, SDV.legendary, 'center');
       }
@@ -1446,103 +1307,44 @@ export default function App() {
     // ── TITLE SCREEN ──────────────────────────────────────────────────────────
     function drawTitle() {
       const t = Date.now() / 1000;
-      // Warm dusk sky gradient (SDV-style)
       const skyGrad = cx.createLinearGradient(0, 0, 0, H);
-      skyGrad.addColorStop(0, '#1A3050');
-      skyGrad.addColorStop(0.45, '#2A5080');
+      skyGrad.addColorStop(0,   '#1A3050');
+      skyGrad.addColorStop(0.45,'#2A5080');
       skyGrad.addColorStop(0.7, '#3D7AAA');
-      skyGrad.addColorStop(1, '#205870');
+      skyGrad.addColorStop(1,   '#205870');
       cx.fillStyle = skyGrad;
       cx.fillRect(0, 0, W, H);
 
-      // Twinkling stars
-      for (let i = 0; i < 50; i++) {
-        const sx = (i * 137.5) % W, sy = (i * 97.3) % (H * 0.5);
-        const tw = 0.3 + 0.7 * Math.abs(Math.sin(t * (0.5 + i * 0.1)));
-        cx.fillStyle = `rgba(255,255,255,${tw * 0.8})`;
-        cx.fillRect(Math.round(sx), Math.round(sy), i % 7 === 0 ? 2 : 1, i % 7 === 0 ? 2 : 1);
+      for (let i = 0; i < 40; i++) {
+        const sx = (Math.sin(i * 73.1) * 0.5 + 0.5) * W;
+        const sy = (Math.sin(i * 37.9) * 0.5 + 0.5) * H * 0.55;
+        const tw2 = Math.sin(t * 1.1 + i) * 0.5 + 0.5;
+        cx.globalAlpha = tw2 * 0.8;
+        cx.fillStyle = '#FFFFFF';
+        cx.fillRect(Math.round(sx), Math.round(sy), 1, 1);
+        cx.globalAlpha = 1;
       }
 
-      // Moon
-      cx.fillStyle = '#E0ECFF';
-      cx.fillRect(W - 36, 12, 18, 18);
-      cx.fillStyle = 'rgba(180,210,240,0.3)';
-      cx.fillRect(W - 38, 10, 22, 22);
-      cx.fillStyle = '#1A3050';
-      cx.fillRect(W - 32, 12, 14, 15);
-      cx.fillStyle = 'rgba(220,240,255,0.2)';
-      cx.fillRect(W - 36, 12, 2, 18);
+      const waterY = IS_MOBILE ? H * 0.38 : 115;
+      const wgrad = cx.createLinearGradient(0, waterY, 0, H);
+      wgrad.addColorStop(0, '#2A7AC8'); wgrad.addColorStop(1, '#0A2860');
+      cx.fillStyle = wgrad;
+      cx.fillRect(0, waterY, W, H - waterY);
 
-      // Moving clouds
-      for (let i = 0; i < 3; i++) {
-        const cx3 = ((t * 8 + i * 110) % (W + 80)) - 40;
-        cx.fillStyle = 'rgba(150,190,230,0.12)';
-        cx.fillRect(Math.round(cx3), 30 + i * 15, 55 + i * 10, 14);
-        cx.fillRect(Math.round(cx3) + 8, 24 + i * 15, 35, 10);
+      cx.strokeStyle = 'rgba(168,216,248,0.3)'; cx.lineWidth = 1;
+      for (let wx = 0; wx < W; wx += 8) {
+        const wy2 = waterY + Math.sin((wx / 30 + t) * 1.2) * 3;
+        cx.beginPath(); cx.moveTo(wx, wy2); cx.lineTo(wx + 5, wy2); cx.stroke();
       }
 
-      // Water (SDV evening pond)
-      const wBase = H * 0.52;
-      const waterGrad2 = cx.createLinearGradient(0, wBase, 0, H);
-      waterGrad2.addColorStop(0, '#1A5888');
-      waterGrad2.addColorStop(0.5, '#0E3060');
-      waterGrad2.addColorStop(1, '#061830');
-      cx.fillStyle = waterGrad2;
-      cx.beginPath(); cx.moveTo(0, H);
-      for (let x = 0; x <= W; x += 2) {
-        cx.lineTo(x, wBase + Math.sin((x / 40 + t) * 1.2) * 3 + Math.sin((x / 20 + t * 1.7) * 0.8) * 1.5);
-      }
-      cx.lineTo(W, H); cx.closePath(); cx.fill();
+      const titleY = IS_MOBILE ? H * 0.18 : H * 0.22;
+      drawTextShadow('DEEP', IS_MOBILE ? 20 : 18, W / 2, titleY, SDV.waterFoam, 'center');
+      drawTextShadow('REEL', IS_MOBILE ? 20 : 18, W / 2, titleY + (IS_MOBILE ? 26 : 22), SDV.legendary, 'center');
 
-      // Water shimmer
-      for (let i = 0; i < 8; i++) {
-        const fx = ((t * 15 + i * 42) % (W + 20)) - 10;
-        cx.fillStyle = 'rgba(140,220,255,0.12)';
-        cx.fillRect(Math.round(fx), wBase + 5, 20, 3);
-      }
-
-      // Dock (SDV style)
-      cx.fillStyle = SDV.oakPlank;
-      cx.fillRect(0, wBase - 8, W, 10);
-      cx.fillStyle = SDV.oakLight;
-      cx.fillRect(0, wBase - 8, W, 2);
-      for (let nx = 20; nx < W; nx += 40) {
-        cx.fillStyle = SDV.oakBezel;
-        cx.fillRect(nx, wBase - 6, 2, 4);
-        cx.fillRect(nx + 20, wBase - 6, 2, 4);
-      }
-      // Dock posts
-      for (let px = 30; px < W; px += 80) {
-        cx.fillStyle = SDV.oakMid;
-        cx.fillRect(px, wBase + 1, 6, 20);
-        cx.fillStyle = SDV.oakLight;
-        cx.fillRect(px, wBase + 1, 6, 2);
-      }
-
-      // Title wood sign
-      const signY = IS_MOBILE ? H * 0.08 : H * 0.06;
-      drawWoodBorder(W / 2 - 80, signY, 160, IS_MOBILE ? 65 : 55);
-      // Sign post
-      cx.fillStyle = SDV.oakMid;
-      cx.fillRect(W / 2 - 4, signY + (IS_MOBILE ? 65 : 55), 8, 20);
-      cx.fillStyle = SDV.oakLight;
-      cx.fillRect(W / 2 - 4, signY + (IS_MOBILE ? 65 : 55), 8, 2);
-      // Title text
-      drawTextShadow('DEEP', IS_MOBILE ? 20 : 18, W / 2, signY + (IS_MOBILE ? 28 : 22), SDV.waterFoam, 'center');
-      drawTextShadow('REEL', IS_MOBILE ? 20 : 18, W / 2, signY + (IS_MOBILE ? 50 : 42), SDV.legendary, 'center');
-
-      // Subtitle
-      drawText('PIXEL FISHING ROGUELITE', IS_MOBILE ? 4 : 4, W / 2, signY + (IS_MOBILE ? 82 : 72), SDV.parchDark, 'center');
-
-      // Features list (SDV notice board style)
-      const noteY = IS_MOBILE ? H * 0.5 : H * 0.58;
-      drawWoodBorder(W / 2 - 88, noteY - 4, 176, IS_MOBILE ? 68 : 60);
-      const features = IS_MOBILE
-        ? ['☀ WEATHER SYSTEM', '🏆 TROPHY WALL', '💀 DANGER FISH', '⚡ POWER CASTS', '🌊 OCEAN CURRENTS']
-        : ['☀ WEATHER  🏆 TROPHIES  💀 DANGER', '⚡ POWER CASTS  🌊 CURRENTS'];
+      const noteY = IS_MOBILE ? H * 0.52 : H * 0.52;
+      const features = ['PIXEL FISHING ROGUELITE', '12 FISH + DANGER SPECIES', '5 ZONES • SHOP • TROPHIES'];
       features.forEach((f, i) => drawText(f, IS_MOBILE ? 4 : 4, W / 2, noteY + 8 + i * (IS_MOBILE ? 13 : 13), SDV.parchDark, 'center'));
 
-      // Press start (blinking)
       const blink = Math.floor(t * 2) % 2 === 0;
       if (blink) {
         drawWoodBorder(W / 2 - 72, IS_MOBILE ? H * 0.84 : H * 0.86, 144, 16);
@@ -1573,7 +1375,6 @@ export default function App() {
     function drawWin() {
       drawWoodBg(0, 0, W, H);
       const t = Date.now() / 1000;
-      // Rainbow shimmer
       for (let i = 0; i < 6; i++) {
         cx.fillStyle = `hsla(${i * 60 + t * 40}, 70%, 50%, 0.04)`;
         cx.fillRect(0, i * (H / 6), W, H / 6);
@@ -1600,36 +1401,26 @@ export default function App() {
       const flip = Math.sin((t4 || 0) * 0.3) > 0 ? 1 : -1;
       cx.scale(flip * scale, scale);
       const w = fish.w, h = fish.h, col = fish.col;
-
-      // Shadow
       cx.fillStyle = 'rgba(0,0,0,0.2)';
       cx.fillRect(-w / 2 + 2, -h / 2 + 2, w, h);
-      // Body
       cx.fillStyle = col;
       cx.fillRect(-w / 2, -h / 2, w, h);
-      // Belly lighter
       cx.fillStyle = 'rgba(255,255,255,0.22)';
       cx.fillRect(-w / 2 + 2, 0, w - 4, h / 2 - 1);
-      // Scales (pixel dots)
       cx.fillStyle = 'rgba(0,0,0,0.08)';
       for (let s = 0; s < 3; s++) cx.fillRect(-w / 2 + 5 + s * 7, -h / 4, 5, h / 2);
-      // Tail
       cx.fillStyle = col;
       cx.fillRect(-w / 2 - 7, -h / 2, 7, h);
       cx.fillStyle = 'rgba(0,0,0,0.2)';
       cx.fillRect(-w / 2 - 7, -h / 2, 7, 2);
       cx.fillRect(-w / 2 - 7, h / 2 - 2, 7, 2);
-      // Dorsal fin
       cx.fillStyle = col;
       cx.fillRect(-w / 4, -h / 2 - 4, w / 3, 4);
       cx.fillStyle = 'rgba(255,255,255,0.2)';
       cx.fillRect(-w / 4, -h / 2 - 4, 2, 4);
-      // Eye
       cx.fillStyle = '#fff'; cx.fillRect(w / 2 - 7, -h / 4, 5, 5);
       cx.fillStyle = '#000'; cx.fillRect(w / 2 - 6, -h / 4 + 1, 3, 3);
       cx.fillStyle = 'rgba(255,255,255,0.8)'; cx.fillRect(w / 2 - 6, -h / 4 + 1, 1, 1);
-
-      // Legendary tentacles (Kraken)
       if (fish.tier === 4) {
         for (let i = 0; i < 5; i++) {
           cx.fillStyle = col;
@@ -1639,22 +1430,18 @@ export default function App() {
         cx.fillRect(w / 2 - 7, -h / 4, 5, 5);
         cx.fillStyle = '#000'; cx.fillRect(w / 2 - 6, -h / 4 + 1, 3, 3);
       }
-      // Swordfish bill
       if (fish.name === 'SWORDFISH') {
         cx.fillStyle = '#D0D8E8'; cx.fillRect(w / 2, -1, 16, 3);
         cx.fillStyle = 'rgba(255,255,255,0.4)'; cx.fillRect(w / 2, -1, 4, 1);
       }
-      // Oarfish long tail
       if (fish.name === 'OARFISH') {
         cx.fillStyle = fish.col; cx.fillRect(w / 2, h / 4, 14, 3);
         for (let i = 0; i < 4; i++) cx.fillRect(w / 2 + i * 3, h / 4 - 3, 2, 3);
       }
-      // Danger fish special marks
       if (fish.danger) {
         cx.fillStyle = SDV.dangerGlow;
-        cx.fillRect(-w / 2 + 2, -h / 2, w - 4, 2); // red stripe top
-        cx.fillRect(-w / 2 + 2, h / 2 - 2, w - 4, 2); // red stripe bottom
-        // Fangs
+        cx.fillRect(-w / 2 + 2, -h / 2, w - 4, 2);
+        cx.fillRect(-w / 2 + 2, h / 2 - 2, w - 4, 2);
         if (fish.name === 'MORAY EEL') {
           cx.fillStyle = '#FFF8E0';
           cx.fillRect(w / 2 - 3, -h / 4 + 4, 2, 4);
@@ -1670,7 +1457,6 @@ export default function App() {
       cx.save();
       cx.translate(cx2, cy2);
       if (tab === 0) {
-        // Bait icons
         if (item.id === 'worm') {
           cx.fillStyle = '#C87840';
           cx.fillRect(-4, -3, 4, 4); cx.fillRect(-1, -6, 4, 4); cx.fillRect(2, -3, 4, 4);
@@ -1694,11 +1480,8 @@ export default function App() {
           cx.fillStyle = '#E03020'; cx.fillRect(-4, -3, 8, 7);
           cx.fillStyle = '#FF8030'; cx.fillRect(3, -7, 2, 4);
           cx.fillStyle = '#FFE050'; cx.fillRect(3, -9, 2, 2);
-        } else {
-          cx.fillStyle = col; cx.fillRect(-6, -5, 12, 10);
-        }
+        } else { cx.fillStyle = col; cx.fillRect(-6, -5, 12, 10); }
       } else if (tab === 1) {
-        // Upgrade icons
         if (item.type === 'reel') {
           cx.fillStyle = '#4080C0'; cx.fillRect(-6, -6, 12, 12);
           cx.fillStyle = '#80C0F8'; cx.fillRect(-4, -4, 8, 8);
@@ -1718,11 +1501,8 @@ export default function App() {
           cx.fillStyle = SDV.dangerGlow; cx.fillRect(-6, -2, 12, 4);
           cx.fillStyle = '#FFF8E0'; cx.fillRect(-4, -6, 2, 4); cx.fillRect(2, -6, 2, 4);
           cx.fillStyle = SDV.oakDark; cx.fillRect(-3, -1, 6, 2);
-        } else {
-          cx.fillStyle = col; cx.fillRect(-5, -5, 10, 10); cx.fillStyle = SDV.oakDark; cx.fillRect(-2, -2, 4, 4);
-        }
+        } else { cx.fillStyle = col; cx.fillRect(-5, -5, 10, 10); cx.fillStyle = SDV.oakDark; cx.fillRect(-2, -2, 4, 4); }
       } else {
-        // Lure icons
         if (item.id === 'lucky') {
           cx.fillStyle = col;
           cx.fillRect(-1, -6, 2, 12); cx.fillRect(-6, -1, 12, 2);
@@ -1734,9 +1514,7 @@ export default function App() {
         } else if (item.id === 'moon') {
           cx.fillStyle = col; cx.fillRect(-5, -5, 10, 10);
           cx.fillStyle = SDV.oakDark; cx.fillRect(-2, -4, 9, 8);
-        } else {
-          cx.fillStyle = col; cx.fillRect(-5, -4, 10, 8);
-        }
+        } else { cx.fillStyle = col; cx.fillRect(-5, -4, 10, 8); }
       }
       cx.restore();
     }
@@ -1815,13 +1593,11 @@ export default function App() {
     }
 
     function handlePointerDown(mx: number, my: number) {
-      if (state === S.TITLE) { newGame(); state = S.DEPTH; return; }
-      if (state === S.TROPHY) { state = S.DEPTH; return; }
+      if (state === S.TITLE)     { newGame(); state = S.DEPTH; return; }
+      if (state === S.TROPHY)    { state = S.DEPTH; return; }
       if (state === S.DEPTH) {
-        // Trophy wall button
         const tby = IS_MOBILE ? 418 : 218;
         if (my > tby - 10 && my < tby + 10 && mx > W - 70) { state = S.TROPHY; return; }
-        // Depth buttons
         const wy = IS_MOBILE ? 220 : 88;
         if (my > wy + 8 && my < wy + 50) {
           const bw = IS_MOBILE ? 86 : 78;
@@ -1831,7 +1607,6 @@ export default function App() {
             if (mx > ox + i * gap && mx < ox + i * gap + bw) { g.depthSel = i; }
           }
         }
-        // Bait row
         const by2 = IS_MOBILE ? 345 : 158;
         if (my > by2 + 2 && my < by2 + 22) {
           g.baits.forEach((_b2: any, i: number) => {
@@ -1839,12 +1614,12 @@ export default function App() {
             if (mx > bx && mx < bx + 52) { g.activeBait = g.activeBait === i ? null : i; }
           });
         }
-        // Long press for power cast — initiate
         startCastCharge();
         return;
       }
       if (state === S.CAST_CHARGE) { releasePowerCast(); return; }
-      if (state === S.WAITING) { earlyReel(); return; }
+      if (state === S.WAITING)    { earlyReel(); return; }
+      if (state === S.BITE)       { startReel(); return; }
       if (state === S.CAUGHT || state === S.MISS) { if (g.timer > 30) nextCast(); return; }
       if (state === S.ZONE_CLEAR) {
         const by3 = IS_MOBILE ? 350 : 175;
@@ -1852,7 +1627,7 @@ export default function App() {
         return;
       }
       if (state === S.GAME_OVER || state === S.WIN) { state = S.TITLE; return; }
-      if (state === S.SHOP) { handleShopClick(mx, my); return; }
+      if (state === S.SHOP)       { handleShopClick(mx, my); return; }
     }
 
     function handlePointerMove(mx: number, my: number) {
@@ -1872,28 +1647,26 @@ export default function App() {
     }
 
     function handleKey(code: string, _down: boolean) {
-      if (state === S.TITLE) { if (code === 'Space' || code === 'Enter') { newGame(); state = S.DEPTH; } return; }
-      if (state === S.TROPHY) { if (code === 'Space' || code === 'Escape' || code === 'Enter') state = S.DEPTH; return; }
+      if (state === S.TITLE)    { if (code === 'Space' || code === 'Enter') { newGame(); state = S.DEPTH; } return; }
+      if (state === S.TROPHY)   { if (code === 'Space' || code === 'Escape' || code === 'Enter') state = S.DEPTH; return; }
       if (state === S.DEPTH) {
-        if (code === 'ArrowLeft' || code === 'KeyA') g.depthSel = Math.max(0, g.depthSel - 1);
+        if (code === 'ArrowLeft'  || code === 'KeyA') g.depthSel = Math.max(0, g.depthSel - 1);
         if (code === 'ArrowRight' || code === 'KeyD') g.depthSel = Math.min(2, g.depthSel + 1);
         if (code === 'KeyT') { state = S.TROPHY; return; }
-        if (code === 'Tab') { g.activeBait = g.baits.length ? (g.activeBait === null ? 0 : (g.activeBait + 1) % g.baits.length) : null; }
+        if (code === 'Tab')  { g.activeBait = g.baits.length ? (g.activeBait === null ? 0 : (g.activeBait + 1) % g.baits.length) : null; }
         if (code === 'Space' || code === 'Enter') startCastCharge();
         return;
       }
-      if (state === S.CAST_CHARGE) {
-        // Space release handled by keyup
-        return;
-      }
-      if (state === S.WAITING) { if (code === 'Space') earlyReel(); return; }
+      if (state === S.CAST_CHARGE) return;
+      if (state === S.WAITING)  { if (code === 'Space') earlyReel(); return; }
+      if (state === S.BITE)     { if (code === 'Space' || code === 'Enter') startReel(); return; }
       if (state === S.CAUGHT || state === S.MISS) { if (code === 'Space' || code === 'Enter') nextCast(); return; }
       if (state === S.ZONE_CLEAR) { if (code === 'Space' || code === 'Enter') openShop(); return; }
       if (state === S.GAME_OVER || state === S.WIN) { if (code === 'Space' || code === 'Enter') state = S.TITLE; return; }
       if (state === S.SHOP) {
-        if (code === 'ArrowLeft' || code === 'KeyA') g.shopSel = Math.max(0, g.shopSel - 1);
+        if (code === 'ArrowLeft'  || code === 'KeyA') g.shopSel = Math.max(0, g.shopSel - 1);
         if (code === 'ArrowRight' || code === 'KeyD') g.shopSel = Math.min(shopPageItems().length - 1, g.shopSel + 1);
-        if (code === 'Tab') { g.shopTab = (g.shopTab + 1) % 3; g.shopSel = 0; }
+        if (code === 'Tab')    { g.shopTab = (g.shopTab + 1) % 3; g.shopSel = 0; }
         if (code === 'Space' || code === 'Enter') shopBuy();
         if (code === 'Escape') leaveShop();
         return;
@@ -1901,7 +1674,6 @@ export default function App() {
     }
 
     function handleShopClick(mx: number, my: number) {
-      // Tab clicks
       const tabY = 32, tabH = 18;
       if (my > tabY && my < tabY + tabH) {
         const tabW = Math.floor(W / 3);
@@ -1909,7 +1681,6 @@ export default function App() {
           if (mx > i * tabW && mx < (i + 1) * tabW) { g.shopTab = i; g.shopSel = 0; return; }
         }
       }
-      // Item clicks
       const items = shopPageItems();
       const colCount = 2;
       const itemW = IS_MOBILE ? 148 : 148;
@@ -1919,11 +1690,10 @@ export default function App() {
       items.forEach((_item: any, i: number) => {
         const col = i % colCount;
         const row = Math.floor(i / colCount);
-        const bx = startX + col * (itemW + gapX);
-        const by = itemStartY + row * (itemH + 4);
+        const bx  = startX + col * (itemW + gapX);
+        const by  = itemStartY + row * (itemH + 4);
         if (mx > bx && mx < bx + itemW && my > by && my < by + itemH) { g.shopSel = i; shopBuy(); }
       });
-      // Bottom buttons
       const bottomY = IS_MOBILE ? H - 50 : 208;
       if (my > bottomY && my < bottomY + 18 && mx < 110) leaveShop();
       if (my > bottomY && my < bottomY + 18 && mx > W - 110) {
@@ -1956,7 +1726,7 @@ export default function App() {
   return (
     <div style={{
       width: '100vw', height: '100vh',
-      background: '#1A0E04',
+      background: '#0A0604',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden',
       fontFamily: "'Press Start 2P', monospace",
